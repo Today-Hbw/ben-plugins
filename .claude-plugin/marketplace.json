@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-plugins-ben",
+  "description": "ben 的 Claude Code 插件集合，包含个人研发流程等自定义插件",
+  "owner": {
+    "name": "ben",
+    "email": "benbowenqwe@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "dev-flow",
+      "description": "个人研发流程插件：从 PRD 到交付的完整 8 步工作流，自动编排需求分析、提问对齐、技术方案、编码、自测、CR、总结",
+      "author": {
+        "name": "ben",
+        "email": "benbowenqwe@gmail.com"
+      },
+      "source": "./plugins/dev-flow",
+      "category": "development",
+      "homepage": "https://github.com/benbowenqwe/claude-plugins-ben/tree/main/plugins/dev-flow"
+    }
+  ]
+}

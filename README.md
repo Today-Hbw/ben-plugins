@@ -1,0 +1,41 @@
+# Claude Code Plugins - ben
+
+ben 的 Claude Code 插件集合，包含个人研发流程等自定义插件。
+
+## 结构
+
+- **`/plugins`** - 内部插件
+
+## 安装
+
+在 Claude Code 中运行：
+
+```
+/plugin install dev-flow@claude-plugins-ben
+```
+
+或在 `/plugin > Discover` 中浏览。
+
+## 插件列表
+
+| 插件 | 说明 |
+|------|------|
+| [dev-flow](plugins/dev-flow) | 从 PRD 到交付的完整 8 步研发工作流 |
+
+## 插件结构
+
+每个插件遵循标准结构：
+
+```
+plugin-name/
+├── .claude-plugin/
+│   └── plugin.json      # 插件元数据（必需）
+├── commands/            # 斜杠命令（可选）
+├── skills/              # 技能定义（可选）
+├── config/              # 配置模板（可选）
+└── README.md            # 文档
+```
+
+## License
+
+MIT

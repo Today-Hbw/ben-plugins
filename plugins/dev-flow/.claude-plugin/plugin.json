@@ -1,0 +1,8 @@
+{
+  "name": "dev-flow",
+  "description": "个人研发流程插件：从 PRD 到交付的完整 8 步工作流，自动编排需求分析、提问对齐、技术方案、编码、自测、CR、总结",
+  "author": {
+    "name": "ben",
+    "email": "benbowenqwe@gmail.com"
+  }
+}
