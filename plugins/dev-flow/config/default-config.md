@@ -48,8 +48,12 @@ default_skip: ""
 
 ## 说明
 
-- 配置文件放在 PRD 根目录的 `.claude/dev-flow.config.md`
-- 如果不创建配置文件，插件使用默认值
+- 配置文件可放在两处：PRD 根目录的 `.claude/dev-flow.config.md`（仅当前项目生效）或全局 `~/.claude/dev-flow.config.md`（跨项目复用）。**项目配置优先于全局配置。**
+- 如果两处都没有，插件使用默认值。
+- `person`（个人标识）字段有两个用途：
+  1. **文档署名**：问答记录 / 计划 / 总结 文档中的「负责人」。
+  2. **目录前缀**：批次目录与会话目录的前缀，`<person>_YYYYMMDD` / `<person>__<YYYYMMDDHHmmss>`。
+- **未配置时优先询问并记录**：若两处配置都没有 `person`（或为空），dev-flow 在第 0 步会**优先询问**你的个人标识，并把结果**写入全局** `~/.claude/dev-flow.config.md`，之后跨项目复用、不再重复询问。
 - 输出目录结构：`<PRD根目录>/Claude/<项目名>/<person>_YYYYMMDD/<person>__<YYYYMMDDHHmmss>/`
 - 批次目录 `<person>_YYYYMMDD` 按当天日期自动创建，同一天多次运行共享同一批次目录
 - 每次运行新建一个带时间戳的会话目录，不会覆盖之前的输出

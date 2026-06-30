@@ -84,20 +84,24 @@ PRD 是对话中的一句话，输出在当前工作目录：
 ./output/Claude/ben_20260630/ben__20260630153000/  ← 输出
 ```
 
+> 个人标识（`person`）来自配置文件；未配置时 dev-flow 会在第 0 步优先询问并写入全局 `~/.claude/dev-flow.config.md`。
+
 ## 配置文件
 
-在 PRD 根目录的 `.claude/` 目录下创建 `dev-flow.config.md`：
+可放在 PRD 根目录的 `.claude/dev-flow.config.md`（仅当前项目）或全局 `~/.claude/dev-flow.config.md`（跨项目复用），**项目配置优先**：
 
 ```markdown
 ---
 claude_output: Claude
-person: ben
+person: ben          # 个人标识：用于文档署名 + 运行目录前缀
 language: zh-CN
 ---
 
 ## 个人偏好
 （自定义编码习惯、命名规范等）
 ```
+
+> **个人标识（person）**：若两处配置都没有该字段（或为空），dev-flow 在第 0 步会**优先询问**并把结果**写入全局** `~/.claude/dev-flow.config.md`，之后不再重复询问。
 
 ## 插件结构
 

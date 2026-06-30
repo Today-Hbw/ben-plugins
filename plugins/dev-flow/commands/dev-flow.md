@@ -76,7 +76,20 @@ $ARGUMENTS 可能包含：
    - 从对话上下文获取 PRD 内容
    - 用 AskUserQuestion 让用户确认/补充 PRD 内容
 
-3. **确定批次目录**：
+3. **解析个人标识（person）**：
+
+   后续批次目录、会话目录的前缀和文档署名都用到 `person`，须先确定它。
+
+   - **解析顺序**：先读项目（PRD 根目录）`.claude/dev-flow.config.md`，再读全局 `~/.claude/dev-flow.config.md`，取 frontmatter 中的 `person` 字段（项目配置优先）。
+   - **判定「未配置」**：两处都没有该文件，或文件存在但 `person` 字段缺失/为空。
+   - **未配置时（优先询问并记录）**：
+     - 用 AskUserQuestion 询问用户的个人标识（如 `ben`），说明它将用于批次/会话目录前缀和文档署名。
+     - 拿到后**写入全局** `~/.claude/dev-flow.config.md`：文件不存在则按 `config/default-config.md` 模板创建并填入 `person`；已存在则补充/修改 `person` 字段。
+   - **已配置则直接使用**，不再询问。
+   - 若 PRD 路径中的批次目录名（如 `ben_20260630`）与配置的 `person` 不一致，以配置的 `person` 为准，并提示用户。
+   - 解析出的 `person` 即为后续所有输出文档（问答记录/计划/总结）的「负责人」署名。
+
+4. **确定批次目录**：
 
    批次目录用于归集同一批次的多次会话，命名格式为 `<person>_YYYYMMDD` 或 `<person>_YYYYMMDD_N`（同一天第 N 批）。
 
@@ -101,7 +114,7 @@ $ARGUMENTS 可能包含：
    └── ben_20260630_3/    ← 第三批
    ```
 
-4. **确定输出目录**：
+5. **确定输出目录**：
 
    **情况 A：有项目结构**（路径形如 `root/项目名/person_YYYYMMDD/`）
    - 输出到 `root/Claude/项目名/person_YYYYMMDD/`
@@ -120,17 +133,17 @@ $ARGUMENTS 可能包含：
    - 否则按上述规则推断
    - 用 AskUserQuestion 向用户确认输出目录
 
-5. **创建会话目录**：
+6. **创建会话目录**：
    - 在批次目录下创建 `<person>__<YYYYMMDDHHmmss>` 格式的会话目录
    - 例：`ben_20260630/ben__20260630153000`
    - 所有流程产出的文档都写在这个会话目录里
    - 每次运行新建一个会话目录，不会覆盖之前的输出
 
-6. 创建输出目录（如果不存在）
+7. 创建输出目录（如果不存在）
 
-7. 用 TodoWrite 创建 8 步任务清单，标记已完成和待执行的步骤
+8. 用 TodoWrite 创建 8 步任务清单，标记已完成和待执行的步骤
 
-8. **初始化状态文件**：写入 `<会话目录>/.dev-flow-state.json`，`current_step: 1`
+9. **初始化状态文件**：写入 `<会话目录>/.dev-flow-state.json`，`current_step: 1`
 
 ### 第 1 步：读 PRD
 
