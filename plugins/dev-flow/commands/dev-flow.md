@@ -54,7 +54,7 @@ $ARGUMENTS 可能包含：
 ### 第 0 步：环境初始化
 
 1. **检查恢复状态**（最先执行）：
-   - 如果传入了 `--resume` 参数，查找最近的 Claude 输出目录中的会话目录
+   - 如果传入了 `--resume` 参数，先按已有配置（项目优先，其次全局）读取 `person`，用 `<person>_YYYYMMDD` 批次目录定位最近的 Claude 输出会话目录；读不到 `person` 时按子步骤 3 的规则解析后再定位
    - 如果有会话目录包含 `.dev-flow-state.json`：
      - 读取状态文件，向用户确认是否恢复
      - 用户确认恢复 → 跳到 `current_step` 继续执行
@@ -84,7 +84,7 @@ $ARGUMENTS 可能包含：
    - **判定「未配置」**：两处都没有该文件，或文件存在但 `person` 字段缺失/为空。
    - **未配置时（优先询问并记录）**：
      - 用 AskUserQuestion 询问用户的个人标识（如 `ben`），说明它将用于批次/会话目录前缀和文档署名。
-     - 拿到后**写入全局** `~/.claude/dev-flow.config.md`：文件不存在则按 `config/default-config.md` 模板创建并填入 `person`；已存在则补充/修改 `person` 字段。
+     - 拿到后**写入全局** `~/.claude/dev-flow.config.md`：文件不存在则新建，**仅写入 frontmatter**（参照 `config/default-config.md` 中 `---` 之间的字段，不要把 `## 说明` 等散文写进去）并填入 `person`；已存在则补充/修改 `person` 字段。
    - **已配置则直接使用**，不再询问。
    - 若 PRD 路径中的批次目录名（如 `ben_20260630`）与配置的 `person` 不一致，以配置的 `person` 为准，并提示用户。
    - 解析出的 `person` 即为后续所有输出文档（问答记录/计划/总结）的「负责人」署名。
