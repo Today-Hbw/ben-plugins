@@ -34,15 +34,28 @@ $ARGUMENTS 可能包含：
    - 用 Glob 扫描所有 `.pdf` 和 `.md` 文件
    - 列出找到的文件，向用户确认
 
-3. 确定 Claude 输出目录：
-   - 默认规则：PRD 目录的上级目录 / `Claude` / 当前目录名
-   - 例：PRD 在 `ben_prd/项目/迭代/ben/` → 输出到 `ben_prd/项目/迭代/Claude/ben/`
-   - 检查是否有 `.claude/dev-flow.config.md` 配置文件覆盖默认值
-   - 用 AskUserQuestion 向用户确认输出目录
+3. 解析个人标识（person）：
+   - **解析顺序**：先读项目 `.claude/dev-flow.config.md`，再读全局 `~/.claude/dev-flow.config.md`，取 frontmatter 中的 `person` 字段（项目配置优先）。
+   - **判定「未配置」**：两处都没有该文件，或文件存在但 `person` 字段缺失/为空。
+   - **未配置时（优先询问并记录）**：
+     - 用 AskUserQuestion 询问用户的个人标识（如 `ben`），说明它将用于文档署名和输出运行目录前缀。
+     - 拿到后**写入全局** `~/.claude/dev-flow.config.md`：文件不存在则按 `config/default-config.md` 模板创建并填入 `person`；已存在则补充/修改 `person` 字段。
+   - **已配置则直接使用**，不再询问。
+   - 解析出的 `person` 即为后续所有输出文档（问答记录/计划/总结）的「负责人」署名。
 
-4. 创建输出目录（如果不存在）
+4. 确定 Claude 输出目录：
+   - **默认规则**：`<工作区>/Claude/<项目>/<迭代>/<person>_<时间戳>/`
+     - `<工作区>`：PRD 路径中 `Prd` 目录的上级目录（如 PRD 在 `ben-workspace/Prd/ben-plugins/ben_20260630/`，则工作区为 `ben-workspace`）。
+     - `<项目>/<迭代>`：`Prd/` 之后的子路径，原样镜像到 `Claude/` 下（如 `ben-plugins/ben_20260630`）。
+     - `<person>_<时间戳>`：运行目录，`person` 为上一步解析出的个人标识，时间戳用 Bash `date +%Y%m%d%H%M%S`（格式 `YYYYMMDDHHMMSS`）。
+     - 例：PRD 在 `ben-workspace/Prd/ben-plugins/ben_20260630/` → 输出到 `ben-workspace/Claude/ben-plugins/ben_20260630/ben_20260630171200/`
+   - 若路径中无 `Prd` 段，回退为：PRD 上级目录 / `Claude` / `<person>_<时间戳>`。
+   - 检查 `.claude/dev-flow.config.md` 中的 `claude_output` 等字段是否覆盖默认值。
+   - 用 AskUserQuestion 向用户确认最终输出目录。
 
-5. 用 TodoWrite 创建 8 步任务清单，标记已完成和待执行的步骤
+5. 创建输出目录（如果不存在）
+
+6. 用 TodoWrite 创建 8 步任务清单，标记已完成和待执行的步骤
 
 ### 第 1 步：读 PRD
 

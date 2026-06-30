@@ -44,38 +44,48 @@ cd D:/path/to/ben_prd/项目名/迭代名/人名
 
 ## 输出目录结构
 
-Claude 输出目录自动创建在 PRD 上级目录的 `Claude/` 下：
+输出目录把 PRD 的 `Prd/<项目>/<迭代>` 子树镜像到工作区的 `Claude/` 下，并加一层 `<个人标识>_<时间戳>` 运行目录：
+
+**规则**：`<工作区>/Claude/<项目>/<迭代>/<person>_<YYYYMMDDHHMMSS>/`
+（工作区 = PRD 路径中 `Prd` 目录的上级目录）
 
 ```
-ben_prd/项目名/迭代名/
-├── all/                    ← 所有需求文档
-├── ben/                    ← 你的 PRD（PDF/MD）
-│   ├── 需求1.pdf
-│   └── 需求2.md
+ben-workspace/
+├── Prd/
+│   └── ben-plugins/            ← 项目
+│       └── ben_20260630/       ← 迭代
+│           ├── 需求1.pdf       ← 你的 PRD（PDF/MD）
+│           └── 需求2.md
 └── Claude/
-    └── ben/                ← Claude 输出
-        ├── 问答记录.md
-        ├── 总结.md
-        ├── 需求1_ID001/
-        │   └── 计划.md
-        └── 需求2_ID002/
-            └── 计划.md
+    └── ben-plugins/
+        └── ben_20260630/
+            └── ben_20260630171200/   ← <个人标识>_<时间戳> 运行目录
+                ├── 问答记录.md
+                ├── 总结.md
+                ├── 需求1_ID001/
+                │   └── 计划.md
+                └── 需求2_ID002/
+                    └── 计划.md
 ```
+
+> 个人标识（`person`）来自配置文件；未配置时 dev-flow 会在第 0 步优先询问并写入全局 `~/.claude/dev-flow.config.md`。
 
 ## 配置文件
 
-在项目 `.claude/` 目录下创建 `dev-flow.config.md`：
+可放在项目 `.claude/dev-flow.config.md`（仅当前项目）或全局 `~/.claude/dev-flow.config.md`（跨项目复用），**项目配置优先**：
 
 ```markdown
 ---
 claude_output: Claude
-person: ben
+person: ben          # 个人标识：用于文档署名 + 运行目录前缀
 language: zh-CN
 ---
 
 ## 个人偏好
 （自定义编码习惯、命名规范等）
 ```
+
+> **个人标识（person）**：若两处配置都没有该字段（或为空），dev-flow 在第 0 步会**优先询问**并把结果**写入全局** `~/.claude/dev-flow.config.md`，之后不再重复询问。
 
 ## 插件结构
 
