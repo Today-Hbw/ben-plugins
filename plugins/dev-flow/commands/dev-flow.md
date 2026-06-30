@@ -25,13 +25,13 @@ $ARGUMENTS 可能包含：
 
 ## 会话恢复
 
-状态文件路径：`<output_dir>/.dev-flow-state.json`
+状态文件路径：`<session_dir>/.dev-flow-state.json`
 
 状态文件格式：
 ```json
 {
-  "prd_dir": "D:/path/to/prd",
-  "output_dir": "D:/path/to/output",
+  "prd_dir": "D:/path/to/prd_root/项目名/person",
+  "session_dir": "D:/path/to/prd_root/Claude/项目名/person/person__20260630153000",
   "current_step": 4,
   "completed_steps": [1, 2, 3],
   "generated_files": {
@@ -44,7 +44,7 @@ $ARGUMENTS 可能包含：
 ```
 
 **恢复逻辑：**
-1. `--resume` 参数触发时，读取输出目录的 `.dev-flow-state.json`
+1. `--resume` 参数触发时，读取 person 目录下最新的会话目录的 `.dev-flow-state.json`
 2. 向用户确认："检测到上次进度到步骤 N（已完成步骤 X, Y, Z），是否继续？"
 3. 用户确认后，从 `current_step` 开始执行
 4. 每步完成后立即更新状态文件
@@ -54,30 +54,58 @@ $ARGUMENTS 可能包含：
 ### 第 0 步：环境初始化
 
 1. **检查恢复状态**（最先执行）：
-   - 如果传入了 `--resume` 参数，或输出目录已有 `.dev-flow-state.json`：
+   - 如果传入了 `--resume` 参数，查找最近的 Claude 输出目录中的会话目录
+   - 如果有会话目录包含 `.dev-flow-state.json`：
      - 读取状态文件，向用户确认是否恢复
      - 用户确认恢复 → 跳到 `current_step` 继续执行
-     - 用户选择重新开始 → 删除状态文件，从步骤 1 开始
+     - 用户选择重新开始 → 删除状态文件，创建新的会话目录，从步骤 1 开始
 
-2. 确定 PRD 目录路径：
-   - 如果 $ARGUMENTS 包含路径，使用它
-   - 否则使用当前工作目录
+2. **确定 PRD 来源**（三种情况）：
 
-3. 扫描 PRD 目录：
-   - 用 Glob 扫描所有 `.pdf` 和 `.md` 文件
-   - 列出找到的文件，向用户确认
+   **情况 A：路径指向文件**
+   - 如果 $ARGUMENTS 指向一个 PDF/MD 文件，该文件就是 PRD
+   - PRD 目录 = 该文件所在目录
 
-4. 确定 Claude 输出目录：
-   - 默认规则：PRD 目录的上级目录 / `Claude` / 当前目录名
-   - 例：PRD 在 `ben_prd/项目/迭代/ben/` → 输出到 `ben_prd/项目/迭代/Claude/ben/`
-   - 检查是否有 `.claude/dev-flow.config.md` 配置文件覆盖默认值
+   **情况 B：路径指向目录**
+   - 如果 $ARGUMENTS 指向一个目录，或当前工作目录
+   - 用 Glob 扫描目录中的所有 `.pdf` 和 `.md` 文件
+   - 如果找到文件 → PRD 就是这些文件
+
+   **情况 C：没有文件（对话输入）**
+   - 如果目录为空，或用户明确说 PRD 是对话内容
+   - 从对话上下文获取 PRD 内容
+   - 用 AskUserQuestion 让用户确认/补充 PRD 内容
+
+3. **确定输出目录**：
+
+   **情况 A：有项目结构**（路径形如 `root/项目名/person/`）
+   - 输出到 `root/Claude/项目名/person/`
+   - 例：`ben_prd/亲亲创客合伙人二期/ben/` → `ben_prd/Claude/亲亲创客合伙人二期/ben/`
+
+   **情况 B：没有项目结构**（普通目录或文件）
+   - 输出到 `<PRD目录>/../Claude/<person>/`
+   - 例：`D:/work/prd/` → `D:/work/Claude/ben/`
+
+   **情况 C：对话输入**（无文件）
+   - 输出到 `./output/Claude/<person>/`（当前工作目录）
+
+   **配置文件优先**：
+   - 检查是否有 `.claude/dev-flow.config.md` 配置文件
+   - 如果配置了 `claude_output` 绝对路径，直接使用
+   - 否则按上述规则推断
    - 用 AskUserQuestion 向用户确认输出目录
+
+4. **创建会话目录**：
+   - 在输出目录下创建 `<person>__<YYYYMMDDHHmmss>` 格式的会话目录
+   - 例：`ben__20260630153000`
+   - 所有流程产出的文档都写在这个会话目录里
+   - 每次运行新建一个会话目录，不会覆盖之前的输出
 
 5. 创建输出目录（如果不存在）
 
 6. 用 TodoWrite 创建 8 步任务清单，标记已完成和待执行的步骤
 
-7. **初始化状态文件**：写入 `.dev-flow-state.json`，`current_step: 1`
+7. **初始化状态文件**：写入 `<会话目录>/.dev-flow-state.json`，`current_step: 1`
 
 ### 第 1 步：读 PRD
 
@@ -100,7 +128,7 @@ $ARGUMENTS 可能包含：
 - 每个问题先给推荐答案，再让用户确认
 - 一次只问一个问题
 - 先查代码库，再问用户
-- **同步构建术语表**：发现术语歧义时立即追问并记录，grill 完成后输出 `<output_dir>/术语表.md`
+- **同步构建术语表**：发现术语歧义时立即追问并记录，grill 完成后输出 `<session_dir>/术语表.md`
 
 完成后更新 `.dev-flow-state.json`。
 
@@ -110,7 +138,7 @@ $ARGUMENTS 可能包含：
 
 按 skill 指导：
 - 将 grill 阶段的所有提问和回答整理成结构化的 `问答记录.md`
-- 写入输出目录：`<output_dir>/问答记录.md`
+- 写入输出目录：`<session_dir>/问答记录.md`
 
 完成后更新 `.dev-flow-state.json`。
 
@@ -121,7 +149,7 @@ $ARGUMENTS 可能包含：
 按 skill 指导：
 - 为每个任务生成 `计划.md`，采用**行为化描述**风格
 - 包含：目标、验收标准、任务拆解、边界/依赖（含作用域外）
-- 写入：`<output_dir>/<任务名_ID>/计划.md`
+- 写入：`<session_dir>/<任务名_ID>/计划.md`
 - 写完后用 AskUserQuestion 向用户确认方案
 
 完成后更新 `.dev-flow-state.json`。
@@ -173,7 +201,7 @@ $ARGUMENTS 可能包含：
 按 skill 指导：
 - 生成开发总结 `总结.md`
 - 包含：交付文件清单、上线依赖、设计要点、待联调项
-- 写入：`<output_dir>/总结.md`
+- 写入：`<session_dir>/总结.md`
 - 更新每个任务的 `计划.md` 状态为「已完成（详见 ../总结.md）」
 
 完成后删除 `.dev-flow-state.json`（流程已结束）。
@@ -188,8 +216,55 @@ $ARGUMENTS 可能包含：
 6. **语言**：所有输出文档使用中文
 7. **确认机制**：关键步骤（步骤 2、4、7）完成后必须向用户确认再继续
 
+## 输出目录结构
+
+### 场景 A：有项目结构
+
+```
+ben_prd/
+├── 亲亲创客合伙人二期/              ← PRD 项目
+│   ├── all/                        ← 所有人共用的 PRD
+│   └── ben/                        ← 分配给某人的 PRD
+│       └── 需求.pdf
+│
+└── Claude/
+    └── 亲亲创客合伙人二期/          ← 镜像 PRD 的项目层级
+        └── ben/
+            └── ben__20260630153000/  ← 会话目录
+                ├── .dev-flow-state.json
+                ├── 术语表.md
+                ├── 问答记录.md
+                ├── 任务名_ID001/计划.md
+                └── 总结.md
+```
+
+### 场景 B：没有项目结构（普通目录）
+
+```
+D:/work/my-project/
+├── prd/                            ← PRD 目录（或单个文件）
+│   └── 需求.md
+│
+└── Claude/
+    └── ben/
+        └── ben__20260630153000/    ← 会话目录
+            └── ...
+```
+
+### 场景 C：无文件（对话输入）
+
+```
+当前工作目录/
+└── output/
+    └── Claude/
+        └── ben/
+            └── ben__20260630153000/    ← 会话目录
+                └── ...
+```
+
 ## 输出文件命名规范
 
+- 会话目录：`<person>__<YYYYMMDDHHmmss>`（时间戳精确到秒）
 - 问答记录：`问答记录.md`（固定文件名）
 - 术语表：`术语表.md`（固定文件名）
 - 计划：`<任务简称_ID<任务编号>/计划.md`

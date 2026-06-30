@@ -1,13 +1,13 @@
 # dev-flow 配置模板
 
-将以下内容复制到项目的 `.claude/dev-flow.config.md` 文件中，按需修改。
+将以下内容复制到 PRD 根目录的 `.claude/dev-flow.config.md` 文件中，按需修改。
 
 ```markdown
 ---
-# Claude 输出目录（相对于 PRD 上级目录）
+# Claude 输出目录（相对于 PRD 根目录）
 claude_output: Claude
 
-# 你的标识（用于输出子目录名）
+# 你的标识（用于输出子目录名和会话目录前缀）
 person: ben
 
 # 文档语言
@@ -48,7 +48,8 @@ default_skip: ""
 
 ## 说明
 
-- 配置文件放在项目的 `.claude/dev-flow.config.md`
+- 配置文件放在 PRD 根目录的 `.claude/dev-flow.config.md`
 - 如果不创建配置文件，插件使用默认值
-- `person` 字段用于确定输出目录名（`Claude/<person>/`）
+- 输出目录结构：`<PRD根目录>/Claude/<项目名>/<person>/<person>__<YYYYMMDDHHmmss>/`
+- 每次运行新建一个带时间戳的会话目录，不会覆盖之前的输出
 - 个人偏好部分可以随意扩展，Claude 在对应步骤会参考这些偏好

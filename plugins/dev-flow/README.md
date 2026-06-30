@@ -45,29 +45,45 @@ cd D:/path/to/ben_prd/项目名/迭代名/人名
 
 ## 输出目录结构
 
-Claude 输出目录自动创建在 PRD 上级目录的 `Claude/` 下：
+Claude 输出目录根据 PRD 的位置自动创建，每次运行新建一个带时间戳的会话目录：
+
+### 有项目结构时
 
 ```
-ben_prd/项目名/迭代名/
-├── all/                    ← 所有需求文档
-├── ben/                    ← 你的 PRD（PDF/MD）
-│   ├── 需求1.pdf
-│   └── 需求2.md
+ben_prd/
+├── 亲亲创客合伙人二期/              ← PRD 项目
+│   └── ben/                        ← 你的 PRD（PDF/MD）
+│
 └── Claude/
-    └── ben/                ← Claude 输出
-        ├── .dev-flow-state.json  ← 会话状态（流程结束后自动删除）
-        ├── 问答记录.md
-        ├── 术语表.md             ← 领域词汇表
-        ├── 总结.md
-        ├── 需求1_ID001/
-        │   └── 计划.md
-        └── 需求2_ID002/
-            └── 计划.md
+    └── 亲亲创客合伙人二期/          ← 镜像 PRD 的项目层级
+        └── ben/
+            └── ben__20260630153000/  ← 会话目录
+                ├── 问答记录.md
+                ├── 任务名_ID001/计划.md
+                └── 总结.md
+```
+
+### 没有项目结构时
+
+PRD 只是一个普通目录或文件：
+
+```
+D:/work/my-project/
+├── prd/需求.md                     ← PRD 文件
+└── Claude/ben/ben__20260630153000/ ← 输出
+```
+
+### 对话输入（无文件）
+
+PRD 是对话中的一句话，输出在当前工作目录：
+
+```
+./output/Claude/ben/ben__20260630153000/   ← 输出
 ```
 
 ## 配置文件
 
-在项目 `.claude/` 目录下创建 `dev-flow.config.md`：
+在 PRD 根目录的 `.claude/` 目录下创建 `dev-flow.config.md`：
 
 ```markdown
 ---

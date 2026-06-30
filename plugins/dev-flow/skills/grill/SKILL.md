@@ -124,7 +124,7 @@ PRD
 
 ### 术语表输出
 
-grill 完成后，将所有记录的术语输出到 `<output_dir>/术语表.md`：
+grill 完成后，将所有记录的术语输出到 `<session_dir>/术语表.md`：
 
 ```markdown
 # 术语表
