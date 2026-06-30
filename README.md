@@ -37,6 +37,13 @@ plugin-name/
 └── README.md            # 文档
 ```
 
+## 参考项目
+
+本仓库的插件设计参考了以下项目：
+
+- [mattpocock/skills](https://github.com/mattpocock/skills) — Matt Pocock 的 Claude Code Skills 集合
+- [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) — Anthropic 官方 Claude 插件仓库
+
 ## License
 
 MIT
