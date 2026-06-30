@@ -30,8 +30,8 @@ $ARGUMENTS 可能包含：
 状态文件格式：
 ```json
 {
-  "prd_dir": "D:/path/to/prd_root/项目名/person",
-  "session_dir": "D:/path/to/prd_root/Claude/项目名/person/person__20260630153000",
+  "prd_dir": "D:/path/to/prd_root/项目名/person_YYYYMMDD",
+  "session_dir": "D:/path/to/prd_root/Claude/项目名/person_YYYYMMDD/person__20260630153000",
   "current_step": 4,
   "completed_steps": [1, 2, 3],
   "generated_files": {
@@ -44,7 +44,7 @@ $ARGUMENTS 可能包含：
 ```
 
 **恢复逻辑：**
-1. `--resume` 参数触发时，读取 person 目录下最新的会话目录的 `.dev-flow-state.json`
+1. `--resume` 参数触发时，读取当前批次目录（`<person>_YYYYMMDD`）下最新的会话目录的 `.dev-flow-state.json`
 2. 向用户确认："检测到上次进度到步骤 N（已完成步骤 X, Y, Z），是否继续？"
 3. 用户确认后，从 `current_step` 开始执行
 4. 每步完成后立即更新状态文件
@@ -76,18 +76,43 @@ $ARGUMENTS 可能包含：
    - 从对话上下文获取 PRD 内容
    - 用 AskUserQuestion 让用户确认/补充 PRD 内容
 
-3. **确定输出目录**：
+3. **确定批次目录**：
 
-   **情况 A：有项目结构**（路径形如 `root/项目名/person/`）
-   - 输出到 `root/Claude/项目名/person/`
-   - 例：`ben_prd/亲亲创客合伙人二期/ben/` → `ben_prd/Claude/亲亲创客合伙人二期/ben/`
+   批次目录用于归集同一批次的多次会话，命名格式为 `<person>_YYYYMMDD` 或 `<person>_YYYYMMDD_N`（同一天第 N 批）。
+
+   **批次目录由用户手动创建**，代表一次独立的需求分配。dev-flow 只负责从路径中识别批次目录名，并在 Claude/ 下镜像创建同名目录。
+
+   **检测逻辑：**
+
+   1. **从 PRD 路径提取**（最常用）：
+      - 如果 PRD 路径中包含 `ben_YYYYMMDD` 或 `ben_YYYYMMDD_N` 格式的目录名，直接用它作为批次目录名
+      - 例：`Prd/亲亲创客合伙人二期/ben_20260630_2/` → 批次目录名 = `ben_20260630_2`
+      - Claude 输出镜像创建同名批次目录
+
+   2. **路径中不含批次目录**：
+      - 提示用户：请先在 Prd 下创建批次目录（如 `ben_20260630/`）并写好 `分配.md`，再从该目录运行 dev-flow
+      - 或用 AskUserQuestion 让用户指定批次目录名
+
+   **同一天多批次示例：**
+   ```
+   Prd/项目名/
+   ├── ben_20260630/      ← 第一批：手动创建 + 写分配.md + 跑 dev-flow
+   ├── ben_20260630_2/    ← 第二批：同一天又分到新需求，再建一个
+   └── ben_20260630_3/    ← 第三批
+   ```
+
+4. **确定输出目录**：
+
+   **情况 A：有项目结构**（路径形如 `root/项目名/person_YYYYMMDD/`）
+   - 输出到 `root/Claude/项目名/person_YYYYMMDD/`
+   - 例：`ben-workspace/亲亲创客合伙人二期/ben_20260630/` → `ben-workspace/Claude/亲亲创客合伙人二期/ben_20260630/`
 
    **情况 B：没有项目结构**（普通目录或文件）
-   - 输出到 `<PRD目录>/../Claude/<person>/`
-   - 例：`D:/work/prd/` → `D:/work/Claude/ben/`
+   - 输出到 `<PRD目录>/../Claude/<person>_YYYYMMDD/`
+   - 例：`D:/work/prd/` → `D:/work/Claude/ben_20260630/`
 
    **情况 C：对话输入**（无文件）
-   - 输出到 `./output/Claude/<person>/`（当前工作目录）
+   - 输出到 `./output/Claude/<person>_YYYYMMDD/`（当前工作目录）
 
    **配置文件优先**：
    - 检查是否有 `.claude/dev-flow.config.md` 配置文件
@@ -95,17 +120,17 @@ $ARGUMENTS 可能包含：
    - 否则按上述规则推断
    - 用 AskUserQuestion 向用户确认输出目录
 
-4. **创建会话目录**：
-   - 在输出目录下创建 `<person>__<YYYYMMDDHHmmss>` 格式的会话目录
-   - 例：`ben__20260630153000`
+5. **创建会话目录**：
+   - 在批次目录下创建 `<person>__<YYYYMMDDHHmmss>` 格式的会话目录
+   - 例：`ben_20260630/ben__20260630153000`
    - 所有流程产出的文档都写在这个会话目录里
    - 每次运行新建一个会话目录，不会覆盖之前的输出
 
-5. 创建输出目录（如果不存在）
+6. 创建输出目录（如果不存在）
 
-6. 用 TodoWrite 创建 8 步任务清单，标记已完成和待执行的步骤
+7. 用 TodoWrite 创建 8 步任务清单，标记已完成和待执行的步骤
 
-7. **初始化状态文件**：写入 `<会话目录>/.dev-flow-state.json`，`current_step: 1`
+8. **初始化状态文件**：写入 `<会话目录>/.dev-flow-state.json`，`current_step: 1`
 
 ### 第 1 步：读 PRD
 
@@ -221,33 +246,39 @@ $ARGUMENTS 可能包含：
 ### 场景 A：有项目结构
 
 ```
-ben_prd/
-├── 亲亲创客合伙人二期/              ← PRD 项目
-│   ├── all/                        ← 所有人共用的 PRD
-│   └── ben/                        ← 分配给某人的 PRD
-│       └── 需求.pdf
+ben-workspace/
+├── Prd/
+│   └── 亲亲创客合伙人二期/              ← PRD 项目
+│       ├── all/                        ← 所有人共用的 PRD（唯一数据源）
+│       ├── ben_20260629/               ← ben 第一批任务
+│       │   └── 分配.md                 ← 索引文件，指向 all/ 中的 PRD
+│       └── ben_20260630/               ← ben 第二批任务
+│           └── 分配.md
 │
 └── Claude/
-    └── 亲亲创客合伙人二期/          ← 镜像 PRD 的项目层级
-        └── ben/
-            └── ben__20260630153000/  ← 会话目录
-                ├── .dev-flow-state.json
-                ├── 术语表.md
-                ├── 问答记录.md
-                ├── 任务名_ID001/计划.md
-                └── 总结.md
+    └── 亲亲创客合伙人二期/              ← 镜像 PRD 的项目层级
+        ├── ben_20260629/
+        │   └── ben__20260629183000/    ← 会话目录
+        │       ├── .dev-flow-state.json
+        │       ├── 术语表.md
+        │       ├── 问答记录.md
+        │       ├── 任务名_ID001/计划.md
+        │       └── 总结.md
+        └── ben_20260630/
+            └── ben__20260630153000/    ← 同一天的新会话
+                └── ...
 ```
 
 ### 场景 B：没有项目结构（普通目录）
 
 ```
 D:/work/my-project/
-├── prd/                            ← PRD 目录（或单个文件）
+├── prd/                                ← PRD 目录（或单个文件）
 │   └── 需求.md
 │
 └── Claude/
-    └── ben/
-        └── ben__20260630153000/    ← 会话目录
+    └── ben_20260630/                   ← 批次目录（按当天日期）
+        └── ben__20260630153000/        ← 会话目录
             └── ...
 ```
 
@@ -257,14 +288,15 @@ D:/work/my-project/
 当前工作目录/
 └── output/
     └── Claude/
-        └── ben/
+        └── ben_20260630/               ← 批次目录
             └── ben__20260630153000/    ← 会话目录
                 └── ...
 ```
 
 ## 输出文件命名规范
 
-- 会话目录：`<person>__<YYYYMMDDHHmmss>`（时间戳精确到秒）
+- 批次目录：`<person>_YYYYMMDD`（如 `ben_20260630`，按当天日期自动创建）
+- 会话目录：`<person>__<YYYYMMDDHHmmss>`（时间戳精确到秒，在批次目录下）
 - 问答记录：`问答记录.md`（固定文件名）
 - 术语表：`术语表.md`（固定文件名）
 - 计划：`<任务简称_ID<任务编号>/计划.md`

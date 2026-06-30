@@ -24,13 +24,13 @@
 ### 传入 PRD 目录路径
 
 ```bash
-/dev-flow D:/path/to/ben_prd/项目名/迭代名/人名
+/dev-flow D:/path/to/ben-workspace/项目名/迭代名/人名_YYYYMMDD
 ```
 
 ### 当前目录就是 PRD
 
 ```bash
-cd D:/path/to/ben_prd/项目名/迭代名/人名
+cd D:/path/to/ben-workspace/项目名/迭代名/人名_YYYYMMDD
 /dev-flow
 ```
 
@@ -45,19 +45,22 @@ cd D:/path/to/ben_prd/项目名/迭代名/人名
 
 ## 输出目录结构
 
-Claude 输出目录根据 PRD 的位置自动创建，每次运行新建一个带时间戳的会话目录：
+Claude 输出目录根据 PRD 的位置自动创建。批次目录按当天日期自动归集，每次运行新建一个带时间戳的会话目录：
 
 ### 有项目结构时
 
 ```
-ben_prd/
-├── 亲亲创客合伙人二期/              ← PRD 项目
-│   └── ben/                        ← 你的 PRD（PDF/MD）
+ben-workspace/
+├── Prd/
+│   └── 亲亲创客合伙人二期/              ← PRD 项目
+│       ├── all/                        ← 公共 PRD（唯一数据源）
+│       └── ben_20260630/               ← 你的批次目录
+│           └── 分配.md                 ← 索引文件
 │
 └── Claude/
-    └── 亲亲创客合伙人二期/          ← 镜像 PRD 的项目层级
-        └── ben/
-            └── ben__20260630153000/  ← 会话目录
+    └── 亲亲创客合伙人二期/              ← 镜像 PRD 的项目层级
+        └── ben_20260630/               ← 批次目录（按当天日期）
+            └── ben__20260630153000/    ← 会话目录
                 ├── 问答记录.md
                 ├── 任务名_ID001/计划.md
                 └── 总结.md
@@ -69,8 +72,8 @@ PRD 只是一个普通目录或文件：
 
 ```
 D:/work/my-project/
-├── prd/需求.md                     ← PRD 文件
-└── Claude/ben/ben__20260630153000/ ← 输出
+├── prd/需求.md                             ← PRD 文件
+└── Claude/ben_20260630/ben__20260630153000/ ← 输出
 ```
 
 ### 对话输入（无文件）
@@ -78,7 +81,7 @@ D:/work/my-project/
 PRD 是对话中的一句话，输出在当前工作目录：
 
 ```
-./output/Claude/ben/ben__20260630153000/   ← 输出
+./output/Claude/ben_20260630/ben__20260630153000/  ← 输出
 ```
 
 ## 配置文件

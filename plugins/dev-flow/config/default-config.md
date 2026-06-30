@@ -50,6 +50,7 @@ default_skip: ""
 
 - 配置文件放在 PRD 根目录的 `.claude/dev-flow.config.md`
 - 如果不创建配置文件，插件使用默认值
-- 输出目录结构：`<PRD根目录>/Claude/<项目名>/<person>/<person>__<YYYYMMDDHHmmss>/`
+- 输出目录结构：`<PRD根目录>/Claude/<项目名>/<person>_YYYYMMDD/<person>__<YYYYMMDDHHmmss>/`
+- 批次目录 `<person>_YYYYMMDD` 按当天日期自动创建，同一天多次运行共享同一批次目录
 - 每次运行新建一个带时间戳的会话目录，不会覆盖之前的输出
 - 个人偏好部分可以随意扩展，Claude 在对应步骤会参考这些偏好
