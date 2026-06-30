@@ -11,7 +11,8 @@ ben 的 Claude Code 插件集合，包含个人研发流程等自定义插件。
 在 Claude Code 中运行：
 
 ```
-/plugin install dev-flow@claude-plugins-ben
+/plugin marketplace add Today-Hbw/ben-plugins
+/plugin install dev-flow@ben-plugins
 ```
 
 或在 `/plugin > Discover` 中浏览。

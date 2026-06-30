@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "claude-plugins-ben",
+  "name": "ben-plugins",
   "description": "ben 的 Claude Code 插件集合，包含个人研发流程等自定义插件",
   "owner": {
     "name": "ben",
@@ -16,7 +16,7 @@
       },
       "source": "./plugins/dev-flow",
       "category": "development",
-      "homepage": "https://github.com/benbowenqwe/claude-plugins-ben/tree/main/plugins/dev-flow"
+      "homepage": "https://github.com/benbowenqwe/ben-plugins/tree/main/plugins/dev-flow"
     }
   ]
 }
