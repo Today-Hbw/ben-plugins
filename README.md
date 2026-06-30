@@ -13,6 +13,12 @@ ben 的 Claude Code 插件集合，包含个人研发流程等自定义插件。
 ```
 /plugin marketplace add Today-Hbw/ben-plugins
 /plugin install dev-flow@ben-plugins
+
+
+# 指定版本
+/plugin marketplace add https://github.com/Today-Hbw/ben-plugins.git#v1.0.0
+# 指定分支
+/plugin marketplace add https://github.com/Today-Hbw/ben-plugins.git#your-branch-name
 ```
 
 或在 `/plugin > Discover` 中浏览。
