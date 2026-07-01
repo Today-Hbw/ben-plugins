@@ -1,229 +1,145 @@
 ---
 name: create-service
-description: 创建 Uniplat 领域服务（DomainService）或模型服务（ModelService）
-version: 1.0.0
+description: 创建 Uniplat 领域服务（DomainService）
+version: 1.0.1
 ---
 
-# 创建 Uniplat 服务
+# 创建 Uniplat 领域服务
 
-> 本 skill 用于创建自定义 API 服务，支持两种类型：
-> - **DomainService**：绑定到领域，适合通用业务接口
-> - **ModelService**：绑定到具体模型，自动获取 DataModel
+> 本 skill 用于创建 Uniplat 领域服务（自定义 API），文件位于子项目的 `services/` 目录下。
 
 ## 参数解析
 
 `$ARGUMENTS` 应包含：
-- **服务类型**（必须）：`domain` 或 `model`
-- **服务名**（必须）：大驼峰格式，如 `UserService`、`OrderService`
-- **方法名**（可选）：初始方法名，如 `query`、`update_status`
-- **领域路径/模型名**（可选）：取决于服务类型
+- **服务名**（必须）：snake_case，如 `passport_api`、`client_api`
+- **子项目路径**（可选）：子项目目录路径，省略则询问用户
+- **方法名**（可选）：初始方法名，如 `getUsersInfo`、`queryOrders`
 
 示例：
-- `domain User query` → 创建用户领域服务
-- `model Order batch_approve` → 创建订单模型服务
-
-## 服务类型对比
-
-| 对比项 | DomainService | ModelService |
-|--------|--------------|--------------|
-| 绑定对象 | 领域（SubProject） | 具体 DataModel |
-| 文件位置 | `services/ServiceName.groovy` | `models/ModelName/ModelName.groovy` |
-| 上下文类 | `GatewayContext` | `ModelServiceContext` |
-| API 端点 | `/general/project/{project}/service/{name}/{func}` | `/general/model/{modelName}/service/{func}` |
-| 适用场景 | 跨模型操作、通用业务接口 | 针对单个模型的扩展操作 |
+- `passport_api` → 创建 passport_api 服务
+- `report_api /path/to/subproject generate_monthly` → 创建带方法的报告服务
 
 ## 执行流程
 
-### DomainService 创建
+### 1. 确认信息
 
-#### 1. 确认信息
+用 AskUserQuestion 询问：
 
 ```
-服务名：User
-领域目录：/path/to/domain
-方法：query, update_status, delete
-是否需要 Before 回调：是/否
+服务名：passport_api
+子项目目录：/path/to/subproject
+方法：
+  - getUsersInfo: 批量获取用户信息
+  - queryOrders: 查询订单
 ```
 
-#### 2. 创建服务文件
+### 2. 创建服务文件
 
-文件路径：`<领域目录>/services/<ServiceName>.groovy`
+文件路径：`<子项目>/services/<service_name>.groovy`
 
 ```groovy
-/**
- * {{ServiceName}} 领域服务
- *
- * API 端点：
- * POST /general/project/{project}/service/{{serviceName}}/{func}
- */
+package services
 
 import com.qinqinxiaobao.report.uniplat.gateway.GatewayContext
 import com.qinqinxiaobao.report.uniplat.host.Host
 import com.qinqinxiaobao.report.uniplat.engine.DO.DataObject
-import com.qinqinxiaobao.report.uniplat.engine.DO.EnvDataObject
+import com.qinqinxiaobao.report.utils.AssertUtils
+import com.qinqinxiaobao.report.utils.StringUtils
 
-class {{ServiceName}} {
+class {{service_name}} {
 
     /**
      * {{methodLabel}}
      *
      * 请求参数（body）：
      * - param1: 说明
-     * - param2: 说明
      *
      * 返回：
      * - 结果说明
      */
-    static Object {{methodName}}(GatewayContext ctx) {
-        Host host = Host.getInstance()
-        EnvDataObject env = EnvDataObject.getUserEnv()
+    def {{methodName}}(GatewayContext ctx) {
+        def host = Host.getInstance()
 
-        // 获取参数（注意：parameters 是 Map<String, String[]>）
-        String param1 = ctx.parameters["param1"]?.getAt(0)
         // 获取 body 参数
-        Map body = ctx.body
-        String param2 = body.param2
+        def body = ctx.getBody()
+        def param1 = body.get("param1")?.toString()
 
-        // 业务逻辑
-        DataModel model = host.getDataModel("{{RelatedModel}}")
-        List<DataObject> rows = model.findByMap([field: param1])
+        // 获取查询参数（URL 参数）
+        // def queryParam = ctx.parameters["key"]?.getAt(0)
+
+        // 获取用户信息
+        def user = host.getUser()
+        def userId = user.id
+
+        // 获取数据模型
+        def model = host.getDataModel("{{RelatedModel}}")
+
+        // 查询数据
+        def list = model.queryDataList([status: 1, is_del: 0])
 
         // 返回结果（平台自动包装为 ApiResult）
-        return rows
+        return list.list.collect { item ->
+            [
+                id   : item.getKeyValue(),
+                name : item.name.value,
+                status: item.status.display
+            ]
+        }
     }
 
     /**
      * 另一个方法示例
      */
-    static Object {{anotherMethod}}(GatewayContext ctx) {
-        Map body = ctx.body
+    def {{anotherMethod}}(GatewayContext ctx) {
+        def host = Host.getInstance()
+        def body = ctx.getBody()
+        def id = body.get("id")?.toString()
 
-        // 获取数据模型
-        DataModel model = Host.getInstance().getDataModel("{{RelatedModel}}")
+        AssertUtils.isTrue(StringUtils.notEmptyString(id), "ID不能为空")
 
-        // 查询数据
-        DataObject row = model.findByKey(body.id)
-        if (!row) {
-            return [success: false, message: "数据不存在"]
-        }
+        def model = host.getDataModel("{{RelatedModel}}")
+        def obj = model.getByKeyField(id as long)
+
+        AssertUtils.isTrue(obj != null, "数据不存在")
 
         // 更新数据
-        row.put("status", body.status)
-        row.put("updated_at", new Date())
-        row.update()
+        obj.update([
+            status     : 1,
+            update_time: host.getTimestamp()
+        ])
 
-        return [success: true, data: row]
+        return [
+            result: 0,
+            msg   : "操作成功",
+            data  : [id: obj.getKeyValue(), name: obj.name.value]
+        ]
     }
 }
 ```
 
-#### 3. 创建 Before 回调（可选）
+### 3. 向用户确认
 
-文件路径：`<领域目录>/services/Before<ServiceName>.groovy`
-
-```groovy
-/**
- * {{ServiceName}} 前置回调
- *
- * 在主方法执行前运行
- * 返回 null 继续执行，返回非 null 则中断
- */
-
-import com.qinqinxiaobao.report.uniplat.gateway.GatewayContext
-
-class Before{{ServiceName}} {
-
-    /**
-     * {{methodName}} 前置回调
-     */
-    static Object {{methodName}}(GatewayContext ctx) {
-        // 权限检查示例
-        EnvDataObject env = EnvDataObject.getUserEnv()
-        if (!env.getUserId()) {
-            return [success: false, message: "未登录"]
-        }
-
-        // 参数预处理
-        // ctx.body.param1 = ctx.body.param1?.trim()
-
-        return null  // 继续执行主方法
-    }
-}
-```
-
-### ModelService 创建
-
-#### 1. 确认信息
+完成后展示：
+- 服务文件路径
+- 方法列表
+- API 端点示例
 
 ```
-模型名：Order
-方法：batch_approve, export
-是否需要匿名访问：是/否
+服务已创建：
+  文件：services/passport_api.groovy
+  方法：
+    - getUsersInfo
+    - queryOrders
+
+  API 端点：
+    POST /general/project/{subproject}/service/passport_api/getUsersInfo
+    POST /general/project/{subproject}/service/passport_api/queryOrders
+
+  调用示例：
+    curl -X POST http://localhost:8000/general/project/hro_spview/service/passport_api/getUsersInfo \
+      -H "Content-Type: application/json" \
+      -d '{"userMemberIds": "1,2,3"}'
 ```
-
-#### 2. 在模型 Groovy 中添加方法
-
-读取 `<领域目录>/models/<ModelName>/<ModelName>.groovy`，添加 ModelService 方法：
-
-```groovy
-import com.qinqinxiaobao.report.uniplat.models.service.ModelServiceContext
-
-class {{ModelName}} {
-
-    // ... 现有的 Validator / Behavior / Updator ...
-
-    /**
-     * {{methodLabel}}
-     *
-     * API 端点：
-     * POST /general/model/{{ModelName}}/service/{{methodName}}
-     */
-    static Object {{methodName}}(ModelServiceContext ctx) {
-        DataModel model = ctx.model  // 自动绑定的 DataModel
-        EnvDataObject env = ctx.env
-        Map body = ctx.body
-
-        // 业务逻辑
-        List ids = body.ids
-        ids.each { id ->
-            DataObject row = model.findByKey(id)
-            if (row) {
-                row.put("status", "approved")
-                row.update()
-            }
-        }
-
-        return [success: true, count: ids.size()]
-    }
-}
-```
-
-#### 3. 匿名访问（可选）
-
-如果需要匿名访问，方法签名改用 `AnonymousModelServiceContext`：
-
-```groovy
-import com.qinqinxiaobao.report.uniplat.models.service.AnonymousModelServiceContext
-
-// 匿名方法
-static Object public_query(AnonymousModelServiceContext ctx) {
-    // 无需认证即可访问
-    // API: POST /general/model/Order/service/anonymous/public_query
-}
-```
-
----
-
-## 服务类型与端点对照表
-
-| 服务类型 | 文件位置 | API 端点 | 上下文类 |
-|---------|---------|---------|---------|
-| 标准领域服务 | `services/Name.groovy` | `/general/project/{project}/service/{name}/{func}` | `GatewayContext` |
-| 匿名领域服务 | 同上，方法参数用 `AnonymousGatewayContext` | `/general/project/{project}/service/anonymous/{name}/{func}` | `AnonymousGatewayContext` |
-| 内部领域服务 | 同上 | `/general/project/{project}/internal_service/{name}/{func}` | `InternalDomainServiceContext` |
-| 模型服务 | `models/Name/Name.groovy` | `/general/model/{modelName}/service/{func}` | `ModelServiceContext` |
-| 匿名模型服务 | 同上 | `/general/model/{modelName}/service/anonymous/{func}` | `AnonymousModelServiceContext` |
-| SSE 流式 | `services/Name.groovy` | `/general/project/{project}/stream/{name}/{func}` | `StreamApiContext` |
 
 ---
 
@@ -232,100 +148,174 @@ static Object public_query(AnonymousModelServiceContext ctx) {
 ### 分页查询
 
 ```groovy
-static Object query(GatewayContext ctx) {
-    Host host = Host.getInstance()
-    DataModel model = host.getDataModel("Order")
+def query(GatewayContext ctx) {
+    def host = Host.getInstance()
+    def body = ctx.getBody()
 
     // 获取分页参数
-    int page = (ctx.parameters["page"]?.getAt(0) ?: "1") as int
-    int size = (ctx.parameters["size"]?.getAt(0) ?: "20") as int
-    int offset = (page - 1) * size
+    def page = (body.get("page") ?: "1") as int
+    def size = (body.get("size") ?: "20") as int
 
     // 构建查询条件
-    Map conditions = [:]
-    if (ctx.parameters["status"]?.getAt(0)) {
-        conditions.status = ctx.parameters["status"][0]
+    def conditions = [is_del: 0]
+    if (body.get("status")) {
+        conditions.status = body.get("status") as int
     }
 
-    // 查询总数
-    int total = model.count(conditions)
+    def model = host.getDataModel("system_user")
+    def list = model.queryDataList(conditions)
 
-    // 查询数据
-    List<DataObject> rows = model.findByMap(conditions, [offset: offset, limit: size])
+    // 手动分页
+    def total = list.count()
+    def items = list.list.drop((page - 1) * size).take(size)
 
     return [
-        success: true,
-        data: rows,
-        total: total,
-        page: page,
-        size: size
+        result: 0,
+        data  : items.collect { [id: it.getKeyValue(), name: it.name.value] },
+        total : total,
+        page  : page,
+        size  : size
     ]
 }
 ```
 
-### 文件上传处理
+### 批量操作
 
 ```groovy
-static Object upload(GatewayContext ctx) {
-    Map body = ctx.body
+def batchUpdate(GatewayContext ctx) {
+    def host = Host.getInstance()
+    def body = ctx.getBody()
+    def ids = body.get("ids")?.toString()?.split(",")?.collect { it.trim() as long }
 
-    // 文件在 body 中可能是 File 对象或文件路径
-    def file = body.file
+    AssertUtils.isTrue(ids != null && ids.size() > 0, "请选择要操作的数据")
 
-    // 使用平台文件系统存储
-    Host host = Host.getInstance()
-    String fileId = host.getFileSystem("default").save(file)
+    def model = host.getDataModel("system_user")
+    def now = host.getTimestamp()
+    def operator = host.getUser().id as long
 
-    return [success: true, fileId: fileId]
+    ids.each { id ->
+        def obj = model.getByKeyField(id)
+        if (obj) {
+            obj.update([
+                status     : 1,
+                update_time: now,
+                update_by  : operator
+            ])
+        }
+    }
+
+    return [
+        result: 0,
+        msg   : "操作成功",
+        count : ids.size()
+    ]
+}
+```
+
+### 跨模型操作
+
+```groovy
+def crossModel(GatewayContext ctx) {
+    def host = Host.getInstance()
+    def body = ctx.getBody()
+
+    // 操作多个模型
+    def userModel = host.getDataModel("system_user")
+    def orgModel = host.getDataModel("system_org")
+
+    def user = userModel.getByKeyField(body.get("userId") as long)
+    def org = orgModel.getByKeyField(body.get("orgId") as long)
+
+    AssertUtils.isTrue(user != null, "用户不存在")
+    AssertUtils.isTrue(org != null, "组织不存在")
+
+    // 业务逻辑...
+
+    return [result: 0, msg: "操作成功"]
+}
+```
+
+### 调用模型方法
+
+```groovy
+def callModelMethod(GatewayContext ctx) {
+    def host = Host.getInstance()
+    def body = ctx.getBody()
+
+    // 调用模型 Groovy 中的方法
+    def result = host.invokeModelFunc(
+        "system_user",           // 模型名
+        "getUserDisplay",        // 方法名
+        body.get("userId") as long  // 参数
+    )
+
+    return [result: 0, data: result]
+}
+```
+
+### 直接 SQL 查询
+
+```groovy
+import com.qinqinxiaobao.report.db.DataSourceFactory
+import com.qinqinxiaobao.report.db.DbConsts
+
+def queryWithSql(GatewayContext ctx) {
+    def body = ctx.getBody()
+    def status = body.get("status") as int
+
+    // 获取数据源
+    def ds = DataSourceFactory.getDataSource(DbConsts.HOST)
+    // 指定数据源：DataSourceFactory.getDataSource("mssql_finance")
+
+    // 查询
+    def results = ds.queryForList(
+        "SELECT * FROM system_user WHERE status = ? AND is_del = 0",
+        status
+    )
+
+    return results
 }
 ```
 
 ### 事务处理
 
 ```groovy
-static Object batch_operation(GatewayContext ctx) {
-    Host host = Host.getInstance()
-    DbHandler db = DbHandler.getInstance()
+import com.qinqinxiaobao.report.db.DataSourceFactory
+import com.qinqinxiaobao.report.db.DbConsts
 
-    // 事务内操作
-    db.transaction {
-        // 操作1
-        DataModel orderModel = host.getDataModel("Order")
-        DataObject order = orderModel.findByKey(ctx.body.orderId)
-        order.put("status", "processing")
-        order.update()
+def transactional(GatewayContext ctx) {
+    def host = Host.getInstance()
+    def body = ctx.getBody()
 
-        // 操作2
-        DataModel logModel = host.getDataModel("OperationLog")
-        DataObject log = logModel.newObject()
-        log.put("action", "batch_operation")
-        log.put("target_id", ctx.body.orderId)
-        log.update()
+    DataSourceFactory.transaction(DbConsts.HOST, {
+        def model = host.getDataModel("system_user")
+        def obj = model.getByKeyField(body.get("id") as long)
 
-        // 如果任何操作失败，整个事务回滚
-    }
+        obj.update([status: 1])
+        // 更多操作...
+        // 任何异常都会回滚
+    } as Runnable)
 
-    return [success: true]
+    return [result: 0, msg: "操作成功"]
 }
 ```
 
-### 跨领域调用
+### 远程调用
 
 ```groovy
-static Object cross_domain(GatewayContext ctx) {
-    Host host = Host.getInstance()
+def remoteCall(GatewayContext ctx) {
+    def body = ctx.getBody()
 
-    // 调用本领域模型
-    DataModel orderModel = host.getDataModel("Order")
-    DataObject order = orderModel.findByKey(ctx.body.orderId)
+    // HTTP 调用
+    def url = "https://api.example.com/data"
+    def conn = new URL(url).openConnection() as HttpURLConnection
+    conn.requestMethod = "POST"
+    conn.setRequestProperty("Content-Type", "application/json")
+    conn.doOutput = true
+    conn.outputStream << new groovy.json.JsonBuilder(body).toString()
 
-    // 调用其他领域模型
-    DataModel userModel = host.getDataModel("User")
-    DataObject user = userModel.findByKey(order.getString("user_id"))
-
-    // 调用其他领域的服务
-    SubProject sub = host.getSubProject("user_project")
-    Object result = sub.invokeService("UserService", "check_permission", [userId: user.getKeyValue()])
+    def response = conn.inputStream.text
+    def result = new groovy.json.JsonSlurper().parseText(response)
 
     return result
 }
@@ -333,33 +323,30 @@ static Object cross_domain(GatewayContext ctx) {
 
 ---
 
-## 向用户确认
+## GatewayContext 字段速查
 
-生成完成后，展示：
-- 服务文件路径
-- 方法列表及端点
-- API 调用示例
-
-```
-服务已创建：
-  文件：services/User.groovy
-  方法：
-    - query: POST /general/project/my_domain/service/User/query
-    - update_status: POST /general/project/my_domain/service/User/update_status
-
-  调用示例：
-    curl -X POST http://localhost:8000/general/project/my_domain/service/User/query \
-      -H "Content-Type: application/json" \
-      -d '{"name": "张三"}'
+```groovy
+ctx.getBody()                    // Map 请求体
+ctx.getBody().get("key")         // 获取 body 参数
+ctx.getBody().get("key")?.toString()  // 安全获取字符串
+ctx.parameters                   // Map<String, String[]> URL 参数
+ctx.parameters["key"]?.getAt(0)  // 取第一个 URL 参数
+ctx.request                      // HttpServletRequest
+ctx.request.getHeader("X-xxx")   // 获取请求头
+ctx.pathValue                    // 路径参数
 ```
 
 ---
 
 ## 注意事项
 
-1. **服务名大驼峰**：`UserService`，文件名与服务名一致
-2. **方法名小写下划线**：`update_status`，不能是 `updateStatus`
-3. **所有方法必须 static**：Uniplat 的服务方法都是静态方法
-4. **GatewayContext.parameters 是数组**：取值用 `?.getAt(0)`
-5. **返回 null 或 Map/List**：平台自动包装为 ApiResult
-6. **Before 回调返回非 null 会中断**：利用这个特性做权限检查、参数校验
+1. **package 声明**：`package services`
+2. **类名与文件名一致**：`passport_api.groovy` → `class passport_api`
+3. **所有方法都是实例方法**（不是 static），用 `def` 声明
+4. **参数类型是 `GatewayContext`**
+5. **获取 body 用 `ctx.getBody().get("key")`**，不是 `ctx.body.key`
+6. **获取 URL 参数用 `ctx.parameters["key"]?.getAt(0)`**
+7. **Host.getInstance() 获取单例**，也可用 `ctx.host`
+8. **返回值自动包装为 ApiResult**，直接返回 Map 或 List 即可
+9. **用 AssertUtils 做参数校验**，抛异常由平台统一处理
+10. **服务文件命名**：描述性 + `_api` 后缀（如 `passport_api`、`client_api`）

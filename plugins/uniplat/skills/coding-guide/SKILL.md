@@ -1,7 +1,7 @@
 ---
 name: coding-guide
 description: Uniplat 低代码平台编码规范速查。在 Uniplat 项目中进行任何开发任务时参考。
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Uniplat 编码规范速查
@@ -11,9 +11,9 @@ version: 1.0.0
 ## 平台概览
 
 ```
-JSON 配置（模型元数据、字段、Action、视图）
+JSON 配置（模型元数据、字段、Action、列表/详情视图）
     +
-Groovy 脚本（Validator/Behavior/Updator/DomainService）
+Groovy 脚本（Validator/Behavior/Updator/Service）
     =
 可运行的业务系统
 ```
@@ -22,533 +22,666 @@ Groovy 脚本（Validator/Behavior/Updator/DomainService）
 
 ---
 
-## 1. 领域目录结构
+## 1. 项目结构
 
-每个业务域是一个独立目录（通常是一个 Git 仓库），结构如下：
+### 1.1 工作区与子项目
+
+一个 Uniplat 工作区（Git 仓库或 workspace）包含多个**子项目**：
 
 ```
-my_domain/
-├── config.json                  # 领域基础配置
-├── Entrances.groovy             # 入口菜单配置
-├── models/                      # 数据模型定义（核心）
-│   └── Order/
-│       ├── Order.json           # 模型元数据（字段、视图、Action）
-│       └── Order.groovy         # 业务逻辑钩子（Validator/Behavior/Updator）
-├── services/                    # 领域服务（自定义 API）
-│   └── User.groovy              # 服务名首字母大写
-│   └── BeforeUser.groovy        # 前置回调（可选，命名：Before + 服务名）
-├── utils/                       # 通用工具类
-│   └── SystemOrgUtil.groovy
-├── consts/                      # 常量定义
-│   └── base/common.json
-└── monitors/                    # 监控/调度任务
-    └── ProcessMonitors.groovy
+v3-refrom/                          # 工作区根目录
+├── uniplat-main/                   # 平台主模块（引擎 + 配置 + schemas）
+│   └── config/
+│       └── schemas/                # JSON Schema 定义（开发参考）
+├── uniplat_base/                   # 基础领域子项目
+├── uniplat_common/                 # 公共领域子项目
+├── hro/                            # 业务工作区（含多个子项目）
+│   ├── bank_account/               # 子项目（独立 Git）
+│   ├── hro_spview/                 # 子项目（独立 Git）
+│   └── employment_project/         # 子项目
+└── ...其他业务模块
+```
+
+### 1.2 子项目目录结构
+
+每个子项目是一个独立的 Git 仓库，结构如下：
+
+```
+subproject_name/
+├── .git/                           # 独立 Git 仓库
+├── Entrances.groovy                # 入口菜单配置
+├── consts/                         # 常量定义
+│   ├── base/common.json
+│   └── common.json
+├── models/                         # 数据模型定义（核心）
+│   ├── system/                     # 模型分组（子目录）
+│   │   ├── system_user.json
+│   │   └── system_user.groovy
+│   └── Chat/                       # 另一分组
+│       ├── UniplatChat.json
+│       └── UniplatChat.groovy
+├── services/                       # 领域服务（自定义 API）
+│   ├── passport_api.groovy
+│   └── client_api.groovy
+├── monitors/                       # 监控/调度任务
+├── dashboard/                      # 看板
+├── process/                        # 工作流
+└── test/                           # 测试
+    └── models/
 ```
 
 **命名规则**：
-- 模型名：大驼峰（`Order`、`PartyMember`）
-- Groovy 文件名：与模型/服务同名（`Order.groovy`、`User.groovy`）
-- JSON 文件名：与模型同名（`Order.json`）
+- 子项目名：小写 + 下划线（`hro_spview`、`uniplat_base`）
+- 模型分组目录：CamelCase 或 snake_case（`system`、`Chat`、`business/order`）
+- 模型文件名：与表名一致（snake_case 如 `system_user` 或 CamelCase 如 `UniplatChat`）
+- 服务文件名：描述性 + `_api` 后缀（`passport_api`、`client_api`）
 
 ---
 
-## 2. 数据对象体系
+## 2. 模型 JSON 格式
 
-| 类 | 继承 | 用途 | 关键方法 |
-|----|------|------|----------|
-| **DataObject** | `extends HashMap` | 数据行对象，绑定 DataModel | `update()`, `delete()`, `referTo()`, `getString()`, `startProcess()`, `addLog()`, `getKeyValue()` |
-| **PureDataObject** | `extends HashMap` | 简单键值对，Action 输入参数 | `getMap()`, `getPropertyValue()`, `getValue()` |
-| **EnvDataObject** | `extends PureDataObject` | 环境对象，携带用户身份和权限 | `getRightValidator()`, `getUserId()`, `getXid()` |
-
-### 2.1 DataObject 用法
-
-```groovy
-// 查询一条数据
-DataObject row = host.getDataModel("Order").findByKey(orderId)
-String name = row.getString("name")
-row.put("status", "approved")
-row.update()
-
-// 新建一条数据
-DataObject newRow = host.getDataModel("Order").newObject()
-newRow.put("name", "新订单")
-newRow.put("status", "pending")
-newRow.put("created_by", env.getUserId())
-newRow.update()  // 插入数据库
-```
-
-### 2.2 EnvDataObject 用法
-
-```groovy
-// 获取当前用户环境
-EnvDataObject env = EnvDataObject.getUserEnv()
-String userId = env.getUserId()
-String xid = env.getXid()  // 当前组织 ID
-
-// 环境变量（内置）
-// user_id, xid, org_id, date, month, now
-```
-
----
-
-## 3. Groovy 钩子方法签名
-
-每个模型对应一个 Groovy 文件（`ModelName.groovy`），包含以下钩子方法。
-方法签名必须严格匹配，平台通过**参数类型自动识别**钩子类型。
-
-### 3.1 Validator（业务校验）
-
-```groovy
-// 签名：ActionValidatorContext → 返回 String（null 表示通过）
-static String validate(ActionValidatorContext ctx) {
-    DataObject row = ctx.row
-    PureDataObject inputs = ctx.inputs
-    EnvDataObject env = ctx.env
-    ActionDef action = ctx.action
-
-    if (!inputs.getString("name")) {
-        return "名称不能为空"
-    }
-    return null  // 校验通过
-}
-```
-
-**上下文字段**：
-- `ctx.row` — 当前数据行（DataObject）
-- `ctx.inputs` — 用户输入参数（PureDataObject）
-- `ctx.env` — 用户环境（EnvDataObject）
-- `ctx.action` — Action 定义（ActionDef）
-- `ctx.variables` — Action 变量（Map）
-
-### 3.2 Behavior（核心业务逻辑）
-
-```groovy
-// 签名：ActionBehaviorContext → 返回 BehaviorResult 或 void
-static Object doBehavior(ActionBehaviorContext ctx) {
-    DataObject row = ctx.row
-    PureDataObject inputs = ctx.inputs
-    EnvDataObject env = ctx.env
-
-    // 操作类型：doInsert / doUpdate / doDelete
-    if (ctx.isInsert) {
-        // 新增逻辑
-    } else if (ctx.isUpdate) {
-        // 修改逻辑
-    }
-
-    return null  // 返回 null 走平台默认持久化
-    // 或返回自定义 BehaviorResult
-}
-```
-
-**上下文字段**：
-- `ctx.row` — 当前数据行（DataObject）
-- `ctx.inputs` — 用户输入参数（PureDataObject）
-- `ctx.env` — 用户环境（EnvDataObject）
-- `ctx.isInsert` / `ctx.isUpdate` / `ctx.isDelete` — 操作类型标识
-- `ctx.variables` — Action 变量（Map）
-
-### 3.3 Updator（字段联动）
-
-Updator 有 4 种签名，平台根据参数类型自动识别：
-
-```groovy
-// ① 主表上下文 Updator（推荐，新代码用这个）
-static void updator(ParameterUpdateMasterContext ctx) {
-    ctx.getEnv()           // EnvDataObject
-    ctx.getVariables()     // Map<String, Object>
-    ctx.getParameters()    // 参数列表
-    ctx.getSender()        // 触发变更的字段名，首次加载为空字符串
-    ctx.setData("field_name", value)  // 设置字段值
-    ctx.setOptions("field_name", optionList)  // 设置下拉选项
-}
-
-// ② 详情表上下文 Updator
-static void updator(ParameterUpdateDetailContext ctx) {
-    ctx.getDetail()        // 详情名
-    ctx.getSender()        // detail.field 格式
-}
-
-// ③ 6 参数 Updator（兼容旧代码）
-static void updator(List<DataObject> datalist, EnvDataObject env,
-                    Map variables, PureDataObject params,
-                    List details, String sender) {
-    // 旧式写法，新代码推荐用 ① 或 ②
-}
-
-// ④ 8 参数 Updator（兼容旧代码）
-static void updator(List<DataObject> datalist, EnvDataObject env,
-                    Map variables, PureDataObject params,
-                    List details, String sender,
-                    DataObject masterRow, String detailName) {
-    // 旧式写法
-}
-```
-
-**sender 触发时机**：
-
-| 时机 | sender 值 |
-|------|----------|
-| 首次加载（property2） | `""` (空字符串) |
-| 主表字段变更 | 字段名（如 `"city_id"`） |
-| 详情行字段变更 | `"detail名.字段名"` |
-
-### 3.4 onChange（字段值变更回调）
-
-```groovy
-// 签名：ParameterChangeContext
-static void onChange(ParameterChangeContext ctx) {
-    DataObject row = ctx.row
-    EnvDataObject env = ctx.env
-    Map variables = ctx.variables
-    String fieldName = ctx.fieldName
-    Object newValue = ctx.newValue
-}
-```
-
-### 3.5 pageValuesFunc（页面值计算）
-
-```groovy
-// 签名：参数为 (DataObject, EnvDataObject)
-static Object pageValuesFunc(DataObject row, EnvDataObject env) {
-    // 计算列表/详情页显示值
-    return null
-}
-```
-
-### 3.6 customInitFunc（动态 Action 定义）
-
-```groovy
-// 签名：ActionCustomInitContext
-static Object customInit(ActionCustomInitContext ctx) {
-    ActionDef actionDef = ctx.actionDef
-    EnvDataObject env = ctx.env
-    // 动态修改 Action 定义（增删字段、修改配置等）
-    return actionDef
-}
-```
-
----
-
-## 4. Host 核心容器
-
-Host 是平台单例，所有业务逻辑通过它获取资源：
-
-```groovy
-Host host = Host.getInstance()
-
-// 获取数据模型
-DataModel model = host.getDataModel("Order")
-
-// 获取当前用户
-AuthUser user = host.getUser()
-
-// 获取子项目（领域容器）
-SubProject sub = host.getSubProject("party_project")
-
-// 调用工具方法
-host.invokeUpdator(modelName, updator, context)
-host.invokePageValuesFunc(modelName, func, row)
-host.sendModelEvent(...)
-```
-
----
-
-## 5. 领域服务（DomainService）
-
-绕过模型，直接定义自定义 API。
-
-**文件位置**：`services/` 目录（可按子目录分组）
-
-```groovy
-// services/User.groovy
-// 方法签名：static Object funcName(GatewayContext ctx)
-
-import com.qinqinxiaobao.report.uniplat.gateway.GatewayContext
-
-class User {
-
-    static Object query(GatewayContext ctx) {
-        // 获取参数（注意：parameters 是 Map<String, String[]>）
-        String name = ctx.parameters["name"]?.getAt(0)
-        Map body = ctx.body  // 请求体
-
-        Host host = Host.getInstance()
-        DataModel model = host.getDataModel("User")
-
-        // 查询数据
-        List<DataObject> rows = model.findByMap([name: name])
-
-        return rows  // 平台自动包装为 ApiResult
-    }
-
-    static Object update_status(GatewayContext ctx) {
-        String id = ctx.body.id
-        String status = ctx.body.status
-
-        DataObject row = host.getDataModel("User").findByKey(id)
-        row.put("status", status)
-        row.update()
-
-        return [success: true]
-    }
-}
-```
-
-**GatewayContext 字段**：
-- `ctx.host` — Host 实例
-- `ctx.parameters` — `Map<String, String[]>` 查询参数（**注意是数组**）
-- `ctx.body` — `Map` 请求体
-- `ctx.request` — `HttpServletRequest`
-- `ctx.pathValue` — 路径参数
-
-**API 端点**：
-```
-POST /general/project/{project}/service/{service}/{func}
-```
-
-### 5.1 服务类型速查
-
-| 类型 | 端点 | 上下文类 | 认证要求 |
-|------|------|---------|---------|
-| 标准服务 | `/general/project/{project}/service/{name}/{func}` | `GatewayContext` | 需认证 |
-| 匿名服务 | `/general/project/{project}/service/anonymous/{name}/{func}` | `AnonymousGatewayContext` | 无需认证 |
-| 内部服务 | `/general/project/{project}/internal_service/{name}/{func}` | `InternalDomainServiceContext` | 内部 Token |
-| SOA 服务 | `/soa/{project}/{name}/{func}` | `GatewayContext` | SOA 集成 |
-| SSE 流式 | `/general/project/{project}/stream/{name}/{func}` | `StreamApiContext` | 需认证 |
-| MVC 控制器 | `/general/project/{domain}/ctrl/{name}/{func}` | `ControllerContext` | 需认证 |
-
-### 5.2 Before 前置回调
-
-在 `services/` 目录下创建 `Before + 服务名` 的文件：
-
-```groovy
-// services/BeforeUser.groovy
-class BeforeUser {
-    // 方法名与主服务方法名一致
-    static Object query(GatewayContext ctx) {
-        // 在主服务方法执行前运行
-        // 可做权限检查、参数预处理等
-        return null  // 返回 null 继续执行主方法
-        // 返回非 null 值则中断，直接返回该值
-    }
-}
-```
-
----
-
-## 6. 模型服务（ModelService）
-
-绑定到具体模型的自定义 API，入口是模型名，自动获取 DataModel。
-
-```groovy
-// models/Order/Order.groovy 中添加
-// 方法签名：static Object funcName(ModelServiceContext ctx)
-
-import com.qinqinxiaobao.report.uniplat.models.service.ModelServiceContext
-
-class Order {
-
-    // ... Validator / Behavior / Updator ...
-
-    // 模型服务方法
-    static Object batch_approve(ModelServiceContext ctx) {
-        DataModel model = ctx.model  // 自动绑定的 DataModel
-        List ids = ctx.body.ids
-
-        ids.each { id ->
-            DataObject row = model.findByKey(id)
-            row.put("status", "approved")
-            row.update()
-        }
-
-        return [success: true]
-    }
-}
-```
-
-**API 端点**：
-```
-POST /general/model/{modelName}/service/{func}
-```
-
-**ModelServiceContext 字段**：
-- `ctx.model` — 自动绑定的 DataModel
-- `ctx.host` — Host 实例
-- `ctx.parameters` — 查询参数
-- `ctx.body` — 请求体
-- `ctx.env` — 用户环境
-
----
-
-## 7. 事件系统
-
-### 7.1 进程内事件
-
-```groovy
-// 监听模型事件（在 Entrances.groovy 或专用监听器中注册）
-host.addListener(DataModelEvent) { event ->
-    String modelName = event.modelName
-    String action = event.action
-    DataObject row = event.row
-}
-```
-
-### 7.2 跨进程事件（RabbitMQ）
-
-```groovy
-// 发送事件
-host.sendModelEvent(modelName, action, row)
-
-// 发送延迟事件
-host.sendDelayedModelEvent(modelName, action, row, delaySeconds)
-```
-
----
-
-## 8. 数据库操作
-
-### 8.1 DataModel 查询
-
-```groovy
-DataModel model = host.getDataModel("Order")
-
-// 按主键查询
-DataObject row = model.findByKey(id)
-
-// 按条件查询
-List<DataObject> rows = model.findByMap([status: "pending", type: "normal"])
-
-// 查询所有
-List<DataObject> all = model.findAll()
-```
-
-### 8.2 DbHandler 直接操作
-
-```groovy
-import com.qinqinxiaobao.report.uniplat.db.DbHandler
-
-// 获取默认数据源的 DbHandler
-DbHandler db = DbHandler.getInstance()
-
-// SQL 查询
-List<Map> results = db.query("SELECT * FROM t_order WHERE status = ?", ["pending"])
-
-// SQL 执行
-db.execute("UPDATE t_order SET status = ? WHERE id = ?", ["approved", orderId])
-
-// 指定数据源
-DbHandler mysqlDb = DbHandler.getInstance("mysql")
-```
-
----
-
-## 9. 常见模式
-
-### 9.1 跨模型操作
-
-```groovy
-Host host = Host.getInstance()
-
-// 操作另一个模型
-DataModel userModel = host.getDataModel("User")
-DataObject user = userModel.findByKey(userId)
-user.put("score", user.getInt("score") + 10)
-user.update()
-```
-
-### 9.2 事务处理
-
-```groovy
-// Behavior 中的事务由平台管理
-// 如需手动事务：
-DbHandler db = DbHandler.getInstance()
-db.transaction {
-    // 事务内的操作
-    order.update()
-    payment.update()
-}
-```
-
-### 9.3 远程调用
-
-```groovy
-// 调用另一个领域的服务
-Host host = Host.getInstance()
-SubProject sub = host.getSubProject("hr_project")
-Object result = sub.invokeService("EmployeeService", "query", ctx)
-```
-
-### 9.4 工具类调用
-
-```groovy
-// 调用本领域工具
-Object result = SystemOrgUtil.getOrgName(xid)
-
-// 调用其他领域工具（通过 Host）
-Host host = Host.getInstance()
-Object result = host.invokePluginMethod("hr_project", "HrUtil", "calcSalary", [params])
-```
-
----
-
-## 10. 常量定义
-
-常量文件位于 `consts/` 目录，JSON 格式：
+每个模型对应一个 JSON 文件，格式如下：
 
 ```json
-// consts/base/common.json
 {
-  "ORDER_STATUS": {
-    "PENDING": "pending",
-    "APPROVED": "approved",
-    "REJECTED": "rejected"
+  "database": "(host)",
+  "table": "system_user",
+  "modelDescription": "用户",
+  "key_field": "id",
+  "data_right": true,
+
+  "mapping_defs": [
+    {
+      "name": "status_mapping",
+      "mapping_values": [
+        {"key": "0", "value": "待审核"},
+        {"key": "1", "value": "正常"},
+        {"key": "-1", "value": "已关闭"}
+      ]
+    },
+    {
+      "name": "city_mapping",
+      "database": "(host)",
+      "sql": "SELECT id, name FROM uniplat_district WHERE is_del = 0"
+    }
+  ],
+
+  "mapping_refs": [
+    {
+      "subproject": "uniplat_base",
+      "filename": "base/common.json",
+      "key": "$.mappings.uniplat_user_type_mapping"
+    }
+  ],
+
+  "field_defs": [
+    {
+      "property": "id",
+      "label": "id",
+      "type": "number",
+      "format": "0",
+      "column": {
+        "type": "BIGINT",
+        "autoIncrement": true,
+        "comment": "主键"
+      }
+    },
+    {
+      "property": "name",
+      "label": "名称",
+      "type": "text",
+      "column": {
+        "type": "VARCHAR",
+        "length": 100,
+        "nullable": false
+      }
+    },
+    {
+      "property": "status",
+      "label": "状态",
+      "type": "mapping",
+      "mapping": "status_mapping",
+      "column": {
+        "type": "INT",
+        "defaultValue": "0"
+      }
+    },
+    {
+      "property": "city_id",
+      "label": "城市",
+      "type": "mapping",
+      "mapping": "city_mapping"
+    },
+    {
+      "property": "created_time",
+      "label": "创建时间",
+      "type": "date",
+      "format": "yyyy-MM-dd HH:mm:ss"
+    }
+  ],
+
+  "joint_defs": [],
+  "calculator_defs": [],
+  "references": [
+    {
+      "name": "owner",
+      "model": "system_user",
+      "relations": [
+        {"referProperty": "uid", "referredProperty": "id"}
+      ]
+    }
+  ],
+
+  "action_defs": [
+    {
+      "name": "insert",
+      "when": "1",
+      "label": "新增",
+      "container": "dialog",
+      "parameters": {
+        "server": [
+          {"property": "create_by", "result": "env.user_id.value"},
+          {"property": "create_time", "result": "env.now.value"}
+        ],
+        "inputs": [
+          {
+            "property": "name",
+            "label": "名称",
+            "type": "text",
+            "required": true,
+            "span": 12
+          },
+          {
+            "property": "status",
+            "label": "状态",
+            "type": "mapping",
+            "mapping": "status_mapping"
+          }
+        ]
+      },
+      "behavior": "insertBehavior",
+      "forward": "refresh"
+    },
+    {
+      "name": "update",
+      "when": "1",
+      "label": "修改",
+      "container": "dialog",
+      "parameters": {
+        "server": [
+          {"property": "update_by", "result": "env.user_id.value"},
+          {"property": "update_time", "result": "env.now.value"}
+        ],
+        "inputs": [
+          {
+            "property": "name",
+            "label": "名称",
+            "type": "text",
+            "default_value": "object.name.value"
+          }
+        ]
+      },
+      "validator": "update_validator",
+      "behavior": "updateBehavior",
+      "forward": "refresh"
+    }
+  ],
+
+  "list": {
+    "label": "列表标题",
+    "filters": [
+      {"label": "名称", "field": "name", "type": "text"},
+      {"label": "状态", "field": "status", "type": "enum", "mapping": "status_mapping"}
+    ],
+    "actions": ["insert"],
+    "row_actions": ["update", "delete"],
+    "field_groups": [
+      {"label": "名称", "template": "{name}"},
+      {"label": "状态", "template": "{status}"}
+    ],
+    "detail_action_visible": false
   },
-  "USER_TYPE": {
-    "ADMIN": 1,
-    "NORMAL": 0
-  }
+
+  "detail": {
+    "label": "",
+    "title_template": "",
+    "actions": [],
+    "header": {"field_groups": [], "actions": []},
+    "pages": []
+  },
+
+  "indexes": [
+    {
+      "name": "idx_status",
+      "columns": ["status"]
+    }
+  ],
+
+  "modelVersion": false
 }
 ```
 
-在 Groovy 中引用：
+### 2.1 字段类型速查
+
+| JSON type | 用途 | 说明 |
+|-----------|------|------|
+| `number` | 数字 | `format: "0"` 整数, `"0.00"` 两位小数 |
+| `text` | 文本 | 单行文本输入 |
+| `mapping` | 映射/枚举 | 需指定 `mapping` 字段引用 mapping_defs |
+| `date` | 日期 | `format: "yyyy-MM-dd"` |
+| `datetime` | 日期时间 | `format: "yyyy-MM-dd HH:mm:ss"` |
+| `boolean` | 布尔 | 开关组件 |
+| `hidden` | 隐藏 | 不显示在表单 |
+| `file` | 文件 | 文件上传 |
+
+### 2.2 Action 参数说明
+
+**parameters.server**：服务端自动填充的参数（表达式）
+- `env.user_id.value` — 当前用户 ID
+- `env.now.value` — 当前时间
+- `env.xid.value` — 当前组织 ID
+- 任意 Groovy 表达式
+
+**parameters.inputs**：用户填写的表单参数
+- `property` — 字段名
+- `label` — 标签
+- `type` — 类型（text/number/mapping/date/hidden...）
+- `required` — 是否必填
+- `default_value` — 默认值表达式（如 `object.name.value`）
+- `mapping` — 当 type=mapping 时引用的映射名
+- `updator` — 字段联动方法名
+- `span` — 表单列宽（12=半行，24=整行）
+- `is_param` — 是否作为 URL 参数传递
+
+**Action 属性**：
+- `name` — Action 唯一标识
+- `when` — 显示条件表达式（`"1"` 总是显示）
+- `label` — 按钮文字
+- `container` — `"dialog"` 弹窗 / `"none"` 直接执行
+- `behavior` — 行为方法名（对应 Groovy 方法）
+- `validator` — 校验方法名
+- `forward` — 执行后跳转（`"refresh"` 刷新 / `"close"` 关闭）
+- `tx` — 是否开启事务
+- `on` — `"object"` 表示在数据行上操作
+- `prompt` — 执行前提示文字
+
+---
+
+## 3. 模型 Groovy 格式
+
+每个模型对应一个 Groovy 文件，格式如下：
 
 ```groovy
-// 平台会自动加载常量到上下文
-String status = ORDER_STATUS.PENDING
+package models.system
+
+import com.qinqinxiaobao.report.uniplat.engine.DO.DataObject
+import com.qinqinxiaobao.report.uniplat.engine.DO.EnvDataObject
+import com.qinqinxiaobao.report.uniplat.engine.DO.PureDataObject
+import com.qinqinxiaobao.report.uniplat.executor.ActionBehaviorContext
+import com.qinqinxiaobao.report.uniplat.executor.ActionValidatorContext
+import com.qinqinxiaobao.report.uniplat.executor.ParameterUpdateMasterContext
+import com.qinqinxiaobao.report.uniplat.executor.ParameterChangeContext
+import com.qinqinxiaobao.report.uniplat.executor.BehaviorResult
+import com.qinqinxiaobao.report.uniplat.host.Host
+import com.qinqinxiaobao.report.utils.AssertUtils
+
+class model_name {
+    def model_name = "model_name"
+
+    // ====== Validator ======
+    def update_validator(ActionValidatorContext ctx) {
+        def obj = ctx.dataList.fetchOne()
+        def inputs = ctx.inputs
+        // 使用 AssertUtils 抛出异常（校验失败）
+        AssertUtils.isTrue(inputs.getString("name"), "名称不能为空")
+        AssertUtils.isFalse(obj.getBoolean("is_default"), "默认项不能修改")
+    }
+
+    // ====== Behavior ======
+    def insertBehavior(ActionBehaviorContext ctx) {
+        def inputs = ctx.inputs
+        def host = ctx.host
+        def now = host.getTimestamp()
+        def operator = host.getUser().id as long
+
+        def id = ctx.dataModel.insertByMap([
+            name       : inputs.name.value,
+            status     : inputs.status.value as int,
+            create_by  : operator,
+            create_time: now,
+            update_by  : operator,
+            update_time: now,
+            is_del     : 0
+        ]).id
+
+        return [
+            result: 0,
+            id    : id,
+            msg   : "添加成功"
+        ]
+    }
+
+    def updateBehavior(ActionBehaviorContext ctx) {
+        def inputs = ctx.inputs
+        def obj = ctx.dataList.fetchOne()
+        def now = ctx.host.getTimestamp()
+        def operator = ctx.host.getUser().id as long
+
+        obj.update([
+            name       : inputs.name.value,
+            update_time: now,
+            update_by  : operator
+        ])
+
+        return [
+            result: 0,
+            id    : obj.getKeyValue(),
+            msg   : "修改成功"
+        ]
+    }
+
+    // ====== Updator（字段联动） ======
+    def status_updator(ParameterUpdateMasterContext context) {
+        if (!context.sender || context.sender == "type") {
+            return [default_value: "1"]
+        }
+    }
+
+    def name_updator(ParameterUpdateMasterContext context) {
+        if (!context.sender || context.sender == "city_id") {
+            // 根据城市设置默认名称
+            def cityId = context.variables.city_id
+            if (cityId) {
+                return [default_value: "名称_${cityId}"]
+            }
+        }
+    }
+
+    // ====== onChange（字段变更回调） ======
+    def onTypeChange(ParameterChangeContext context) {
+        def type = context.params.type as String
+        if (type == "CORP") {
+            return [
+                variables: [show_tax_field: true]
+            ]
+        }
+    }
+
+    // ====== 自定义方法（被 action 的 behavior 引用） ======
+    def customAction(ActionBehaviorContext context) {
+        def obj = context.dataList.fetchOne()
+        // 业务逻辑...
+        return [result: 0, msg: "操作成功"]
+    }
+
+    // ====== 自定义工具方法（被 invokeModelFunc 调用） ======
+    def getDisplayInfo(DataObject obj) {
+        return "${obj.name.value} - ${obj.status.display}"
+    }
+}
+```
+
+### 3.1 关键约定
+
+| 项目 | 规范 |
+|------|------|
+| 方法类型 | **实例方法**（不是 static） |
+| 返回类型 | 使用 `def`（不显式声明） |
+| Validator 校验 | 用 `AssertUtils.isTrue/isFalse` 抛异常，**不返回错误字符串** |
+| Behavior 返回 | `[result: 0, id: ..., msg: "..."]` |
+| Updator 返回 | `[default_value: ..., readonly: ..., options: ...]` |
+| onChange 返回 | `[variables: [...]]` 更新变量 |
+| package 声明 | `package models.分组目录名` |
+| model_name 属性 | 类中必须声明 `def model_name = "model_name"` |
+
+### 3.2 Context 类速查
+
+| 类 | 用途 | 关键字段 |
+|----|------|---------|
+| `ActionValidatorContext` | 校验 | `ctx.dataList`, `ctx.inputs`, `ctx.env`, `ctx.host`, `ctx.dataModel` |
+| `ActionBehaviorContext` | 行为 | `ctx.dataList`, `ctx.inputs`, `ctx.env`, `ctx.host`, `ctx.dataModel` |
+| `ParameterUpdateMasterContext` | Updator | `context.sender`, `context.variables`, `context.params`, `context.env` |
+| `ParameterChangeContext` | onChange | `context.params`, `context.host`, `context.variables` |
+
+### 3.3 DataModel 常用方法
+
+```groovy
+def dataModel = ctx.dataModel
+def host = ctx.host
+
+// 查询
+def list = dataModel.queryDataList([status: 1, is_del: 0])
+def one = dataModel.getByKeyField(id)
+def count = list.count()
+def first = list.fetchOne()
+def all = list.list
+
+// 插入
+def newId = dataModel.insertByMap([name: "xxx", status: 1]).id
+
+// 更新
+obj.update([name: "new_name", status: 2])
+obj.update()  // 使用 obj 当前值
+
+// 删除
+obj.delete()
+
+// 数据访问
+def value = obj.name.value        // 字段值
+def display = obj.status.display  // 映射显示值
+def keyVal = obj.getKeyValue()    // 主键值
+def dict = obj.toDict(env)        // 转为 Map
+
+// 关联数据
+def related = obj.get("refName.fieldName").value
+```
+
+### 3.4 Host 常用方法
+
+```groovy
+def host = Host.getInstance()  // 或 ctx.host
+
+// 获取模型
+def model = host.getDataModel("system_user")
+
+// 获取用户信息
+def user = host.getUser()
+def userId = user.id
+def userName = user.name
+
+// 获取时间
+def now = host.getTimestamp()  // 字符串格式时间
+
+// 调用模型方法
+def result = host.invokeModelFunc("model_name", "method_name", arg1, arg2)
+
+// 发送事件
+host.sendModelEvent(modelName, action, row)
 ```
 
 ---
 
-## 11. 注意事项
+## 4. 领域服务（Service）
 
-1. **Groovy 方法签名必须严格匹配**：平台通过参数类型自动判断钩子类型，签名错误会导致钩子不生效
-2. **GatewayContext.parameters 是数组**：`ctx.parameters["name"]` 返回 `String[]`，需要 `?.getAt(0)` 取第一个值
-3. **DataObject.update() 同时处理插入和更新**：主键为空时插入，有值时更新
-4. **Validator 返回 null 表示通过**：返回非 null 字符串即为错误信息
-5. **Updator 的 sender 首次加载为空字符串**：用 `sender == ""` 判断是否为初始化加载
-6. **不要 import 平台核心类**：Host、DataModel 等在 Groovy 中默认可用，无需 import
-7. **Before 回调返回非 null 会中断主方法**：利用这个特性做权限检查
+### 4.1 文件格式
+
+```groovy
+package services
+
+import com.qinqinxiaobao.report.uniplat.gateway.GatewayContext
+import com.qinqinxiaobao.report.uniplat.host.Host
+
+class service_name_api {
+
+    def methodName(GatewayContext ctx) {
+        def host = Host.getInstance()
+        // 获取参数
+        def param = ctx.getBody().get("paramName")
+        def queryParam = ctx.parameters["key"]?.getAt(0)
+
+        // 业务逻辑
+        def model = host.getDataModel("system_user")
+        def users = model.queryDataList([status: 1])
+
+        return users.list.collect {
+            [id: it.getKeyValue(), name: it.name.value]
+        }
+    }
+}
+```
+
+### 4.2 服务 API 端点
+
+```
+POST /general/project/{subproject}/service/{ServiceClass}/{method}
+```
+
+示例：
+```
+POST /general/project/hro_spview/service/passport_api/getUsersInfo
+Body: {"userMemberIds": "1,2,3"}
+```
+
+### 4.3 GatewayContext 字段
+
+```groovy
+ctx.getBody()           // Map 请求体
+ctx.getBody().get("key")// 获取 body 参数
+ctx.parameters          // Map<String, String[]> 查询参数
+ctx.parameters["key"]?.getAt(0)  // 取第一个值
+ctx.request             // HttpServletRequest
+ctx.host                // Host 实例（可选，也可 Host.getInstance()）
+```
 
 ---
 
-## 12. 快速参考
+## 5. 常用模式
 
-### 创建新模型的完整步骤
+### 5.1 插入数据并设为默认
 
-1. 在 `models/` 下创建 `ModelName/` 目录
-2. 创建 `ModelName.json`（模型元数据）
-3. 创建 `ModelName.groovy`（业务钩子）
-4. 在 `config.json` 中注册模型（如需要）
+```groovy
+def insertBehavior(ActionBehaviorContext ctx) {
+    def inputs = ctx.inputs
+    def operator = ctx.host.getUser().id as long
+    def now = ctx.host.getTimestamp()
 
-### 新增 Action 的完整步骤
+    // 如果设为默认，先取消其他默认
+    if (inputs.is_default.value) {
+        ctx.dataModel.queryDataList([uid: operator, is_default: 1]).asStream().forEach {
+            it.update([is_default: 0, update_time: now, update_by: operator])
+        }
+    }
 
-1. 在 `ModelName.json` 的 `actions` 数组中添加 Action 定义
-2. 在 `ModelName.groovy` 中添加对应的 Validator/Behavior 方法
-3. 如需字段联动，添加 Updator 方法
+    def id = ctx.dataModel.insertByMap([
+        uid        : operator,
+        is_default : inputs.is_default.value ? 1 : 0,
+        create_time: now,
+        create_by  : operator
+    ]).id
 
-### 新增领域服务的完整步骤
+    return [result: 0, id: id, msg: "添加成功"]
+}
+```
 
-1. 在 `services/` 下创建 `ServiceName.groovy`
-2. 编写静态方法，签名 `static Object funcName(GatewayContext ctx)`
-3. 如需前置处理，创建 `BeforeServiceName.groovy`
+### 5.2 事务处理
+
+```groovy
+import com.qinqinxiaobao.report.db.DataSourceFactory
+import com.qinqinxiaobao.report.db.DbConsts
+
+DataSourceFactory.transaction(DbConsts.HOST, {
+    // 事务内的操作
+    obj1.update()
+    obj2.delete()
+} as Runnable)
+```
+
+### 5.3 直接 SQL 查询
+
+```groovy
+import com.qinqinxiaobao.report.db.DataSourceFactory
+import com.qinqinxiaobao.report.db.DbConsts
+
+def ds = DataSourceFactory.getDataSource(DbConsts.HOST)
+def results = ds.queryForList("SELECT * FROM table WHERE status = ?", 1)
+```
+
+### 5.4 调用其他模型的方法
+
+```groovy
+def host = ctx.host
+// 调用 model Groovy 中的方法
+def result = host.invokeModelFunc("system_user", "getUserDisplay", userId)
+```
+
+---
+
+## 6. Entrances.groovy
+
+```groovy
+class UniplatEntrances {
+    def SUB_PROJECT_TITLE = '子项目显示名'
+    def order = 1
+    def entrancesV2 = []
+}
+```
+
+---
+
+## 7. 常量定义
+
+`consts/common.json` 或 `consts/base/common.json`：
+
+```json
+{
+  "mappings": {
+    "user_type_mapping": {
+      "name": "user_type_mapping",
+      "mapping_values": [
+        {"key": "1", "value": "平台用户"},
+        {"key": "2", "value": "匿名用户"}
+      ]
+    }
+  },
+  "joints": {}
+}
+```
+
+---
+
+## 8. 开发规范
+
+1. **JSON 文件用 2 空格缩进**，Groovy 文件用 **4 空格缩进**
+2. **Groovy 类名与文件名一致**（`system_user.groovy` → `class system_user`）
+3. **package 声明对应分组目录**（`models/system/system_user.groovy` → `package models.system`）
+4. **所有业务方法都是实例方法**（不是 static）
+5. **使用 `def` 声明方法和变量**
+6. **Validator 用 AssertUtils 抛异常**，不要返回字符串
+7. **Behavior 返回 `[result: 0, id: ..., msg: "..."]`**
+8. **Updator 返回 Map**：`[default_value: ..., readonly: ..., options: ...]`
+9. **数据访问用 `obj.field.value`**，不直接 `obj.get("field")`
+10. **server 参数用表达式**：`env.user_id.value`、`env.now.value`
+11. **mapping_refs 引用其他子项目的常量**：通过 `subproject` + `filename` + `key` 路径
+
+---
+
+## 9. 开发前检查清单
+
+开始编码前：
+- [ ] 确认子项目路径和模型分组目录
+- [ ] 确认数据库表名和数据源（`database` 字段）
+- [ ] 参考 `config/schemas/datamodel.json` 了解 JSON Schema
+- [ ] 查找相似模型参考现有写法
+
+---
+
+## 10. 关键文件位置
+
+| 内容 | 位置 |
+|------|------|
+| JSON Schema | `uniplat-main/config/schemas/datamodel.json` |
+| 基础模型 | `uniplat_base/models/` |
+| 公共模型 | `uniplat_common/models/` |
+| 业务模型 | `hro/{子项目}/models/` |
+| 领域服务 | `hro/{子项目}/services/` |
+| 常量定义 | `{子项目}/consts/` |

@@ -17,25 +17,27 @@ allowed-tools: ["Read", "Write", "Glob", "Grep", "AskUserQuestion", "TodoWrite",
 
 | 命令 | 参数 | 说明 |
 |------|------|------|
-| `model` | `<模型名> [领域路径]` | 创建新模型（JSON + Groovy） |
-| `action` | `<模型名> <Action名> [类型]` | 为模型添加 Action |
-| `service` | `<domain/model> <服务名> [方法名...]` | 创建领域/模型服务 |
+| `model` | `<模型名> [子项目路径] [分组]` | 创建新模型（JSON + Groovy） |
+| `action` | `<模型文件路径> <Action名>` | 为模型添加 Action |
+| `service` | `<服务名> [子项目路径]` | 创建领域服务 |
 
 ### 信息查询
 
 | 命令 | 参数 | 说明 |
 |------|------|------|
 | `guide` | 无 | 查看编码规范速查 |
-| `structure` | `[领域路径]` | 查看领域目录结构 |
-| `models` | `<领域路径>` | 列出领域下所有模型 |
+| `structure` | `[子项目路径]` | 查看子项目目录结构 |
+| `models` | `<子项目路径>` | 列出子项目下所有模型 |
+| `schema` | 无 | 打开 JSON Schema 参考 |
 
 ### 示例
 
 ```
-/uniplat model Order                    # 创建 Order 模型
-/uniplat action Order approve           # 给 Order 添加审批 Action
-/uniplat service domain User query      # 创建用户领域服务
-/uniplat guide                          # 查看平台规范
+/uniplat model system_user                    # 创建 system_user 模型
+/uniplat action path/to/model.json approve    # 给模型添加审批 Action
+/uniplat service passport_api                 # 创建领域服务
+/uniplat guide                                # 查看平台规范
+/uniplat schema                               # 查看 JSON Schema 路径
 ```
 
 ## 执行流程
@@ -48,8 +50,9 @@ allowed-tools: ["Read", "Write", "Glob", "Grep", "AskUserQuestion", "TodoWrite",
 - `action` → 调用 `uniplat:create-action`
 - `service` → 调用 `uniplat:create-service`
 - `guide` → 加载 `uniplat:coding-guide`，输出规范摘要
-- `structure` → 扫描并展示领域目录结构
-- `models` → 扫描并列出领域下所有模型
+- `structure` → 扫描并展示子项目目录结构
+- `models` → 扫描并列出子项目下所有模型
+- `schema` → 输出 JSON Schema 文件路径
 
 ### 2. 无参数时的默认行为
 
@@ -60,9 +63,10 @@ Uniplat 开发助手，我可以帮你：
 
 A. 创建新模型 → 生成 JSON + Groovy 脚手架
 B. 添加 Action → 为模型添加业务操作
-C. 创建服务 → 创建 DomainService 或 ModelService
+C. 创建服务 → 创建 DomainService
 D. 查看规范 → 平台编码规范速查
-E. 查看项目结构 → 分析当前领域目录
+E. 查看项目结构 → 分析当前子项目目录
+F. 查看 JSON Schema → 模型 JSON Schema 路径
 ```
 
 ### 3. 执行对应 Skill
@@ -78,60 +82,74 @@ Skill("uniplat:coding-guide")
 
 ### 4. structure 命令
 
-扫描并展示领域目录结构：
+扫描并展示子项目目录结构：
 
-```groovy
-<领域路径>/
-├── config.json
+```
+<子项目>/
 ├── Entrances.groovy
-├── models/
-│   ├── Order/
-│   │   ├── Order.json
-│   │   └── Order.groovy
-│   └── Product/
-├── services/
-│   ├── User.groovy
-│   └── BeforeUser.groovy
-├── utils/
-│   └── SystemOrgUtil.groovy
 ├── consts/
-│   └── base/common.json
-└── monitors/
-    └── ProcessMonitors.groovy
+│   └── common.json
+├── models/
+│   ├── system/              ← 模型分组
+│   │   ├── system_user.json
+│   │   └── system_user.groovy
+│   └── business/
+│       └── order/
+├── services/                ← 领域服务
+│   └── passport_api.groovy
+├── monitors/
+├── dashboard/
+└── test/
 ```
 
 ### 5. models 命令
 
-列出领域下所有模型：
+列出子项目下所有模型：
 
 ```
-领域：my_domain
+子项目：hro_spview
 模型列表：
-  - Order (t_order)
-    - Actions: create, edit, delete, approve
-  - Product (t_product)
-    - Actions: create, edit, delete
-  - User (t_user)
-    - Actions: create, edit, delete, reset_password
+  - system_user (system_user)
+    - Actions: insert, update, delete
+    - 分组：system
+  - HRO_EnterpriseBalanceRefundOrder (HRO_BalanceRefundOrder)
+    - Actions: rst_account_detail_list, rst_account_reception
+    - 分组：business/order
+  ...
 ```
 
 实现方式：
-1. Glob 扫描 `models/*/` 目录
-2. 读取每个 `ModelName.json` 提取模型信息
-3. 解析 actions 字段列出所有 Action
+1. Glob 扫描 `models/**/*.json`
+2. 读取每个 JSON 提取 `table`、`action_defs`、`modelDescription`
+3. 按分组目录组织输出
 
 ### 6. guide 命令
 
 加载 `uniplat:coding-guide`，输出规范摘要：
 
 **核心要点**：
-- 领域目录结构：`models/` `services/` `utils/` `consts/`
-- 数据对象：`DataObject`（数据行）/ `PureDataObject`（输入参数）/ `EnvDataObject`（环境）
-- Groovy 钩子：`validate` / `doBehavior` / `updator` / `onChange`（全部 static）
-- Host 单例：`Host.getInstance()` 获取平台资源
-- API 端点：`/general/model/` `/general/project/`
+- 项目结构：子项目（独立 Git） + models/ + services/ + consts/
+- JSON 格式：`field_defs` 数组、`action_defs`、`list`/`detail` 视图、`mapping_defs` 映射
+- Groovy 格式：实例方法（非 static）、`def` 声明、`package models.分组`
+- 钩子方法：Validator（AssertUtils 抛异常）、Behavior（返回 [result, id, msg]）、Updator（返回 Map）
+- Context 类：ActionValidatorContext、ActionBehaviorContext、ParameterUpdateMasterContext
+- 数据访问：`obj.field.value`、`dataModel.queryDataList()`、`dataModel.insertByMap()`
 
 完整规范参见 `uniplat:coding-guide` skill。
+
+### 7. schema 命令
+
+输出 JSON Schema 文件路径：
+
+```
+JSON Schema 文件位置：
+  模型 JSON Schema：uniplat-main/config/schemas/datamodel.json
+  应用 JSON Schema：uniplat-main/config/schemas/application.schema.json
+  入口 Schema：uniplat-main/config/schemas/entrances.schema.json
+  看板 Schema：uniplat-main/config/schemas/dashboard.schema.json
+
+使用 IDE 的 JSON Schema 功能可获得语法提示。
+```
 
 ---
 
@@ -141,7 +159,7 @@ Skill("uniplat:coding-guide")
 
 ### 在 Uniplat 项目中使用 dev-flow
 
-1. 在项目根目录创建 `.claude/CLAUDE.md`：
+1. 在工作区或子项目根目录创建 `.claude/CLAUDE.md`：
 
 ```markdown
 # 项目规范
@@ -155,6 +173,7 @@ Skill("uniplat:coding-guide")
 - 使用 `/uniplat:create-action` 创建 Action
 - 使用 `/uniplat:create-service` 创建服务
 - 遵循 `/uniplat:coding-guide` 中的规范
+- JSON Schema 参考：uniplat-main/config/schemas/datamodel.json
 ```
 
 2. 在项目目录下运行 `/dev-flow`，流程会自动识别 Uniplat 项目并按平台规范开发。
@@ -164,25 +183,25 @@ Skill("uniplat:coding-guide")
 不依赖 dev-flow，直接使用本插件的脚手架功能：
 
 ```
-/uniplat model Order                    # 创建模型
-/uniplat action Order approve           # 添加 Action
-/uniplat service domain User query      # 创建服务
-/uniplat guide                          # 查看规范
+/uniplat model system_user                    # 创建模型
+/uniplat action path/to/model.json approve    # 添加 Action
+/uniplat service passport_api                 # 创建服务
+/uniplat guide                                # 查看规范
 ```
 
 ---
 
 ## 输出规范
 
-- 所有生成的文件使用 UTF-8 编码
 - JSON 文件使用 2 空格缩进
 - Groovy 文件使用 4 空格缩进
+- Groovy 文件必须有 `package` 声明
 - 文件名与类名严格一致（大小写敏感）
 - 新增文件后向用户确认，说明文件路径和用途
 
 ## 错误处理
 
-- 模型/领域目录不存在 → 提示用户先创建或指定正确路径
+- 模型/子项目目录不存在 → 提示用户先创建或指定正确路径
 - JSON 解析失败 → 展示错误信息，建议用户检查格式
 - Groovy 语法错误 → 展示错误位置，提供修复建议
 - 参数不足 → 用 AskUserQuestion 询问缺失信息
