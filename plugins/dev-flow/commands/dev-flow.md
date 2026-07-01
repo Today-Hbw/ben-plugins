@@ -12,7 +12,7 @@ allowed-tools: ["Read", "Write", "Glob", "Grep", "AskUserQuestion", "TodoWrite",
 
 $ARGUMENTS 可能包含：
 
-1. **PRD 目录路径**（必须）：PRD 文件所在的目录（PDF/MD 文件）
+1. **PRD 目录路径**（必须）：PRD 文件所在的目录（PDF/MD/HTML 文件）
 2. **流程控制参数**（可选）：
    - `--skip N,M`：跳过指定步骤（如 `--skip 5,6` 跳过编码和自测）
    - `--from N`：从第 N 步开始（如 `--from 4` 从技术方案开始）
@@ -63,12 +63,12 @@ $ARGUMENTS 可能包含：
 2. **确定 PRD 来源**（三种情况）：
 
    **情况 A：路径指向文件**
-   - 如果 $ARGUMENTS 指向一个 PDF/MD 文件，该文件就是 PRD
+   - 如果 $ARGUMENTS 指向一个 PDF/MD/HTML 文件，该文件就是 PRD
    - PRD 目录 = 该文件所在目录
 
    **情况 B：路径指向目录**
    - 如果 $ARGUMENTS 指向一个目录，或当前工作目录
-   - 用 Glob 扫描目录中的所有 `.pdf` 和 `.md` 文件
+   - 用 Glob 扫描目录中的所有 `.pdf`、`.md`、`.html`、`.htm` 文件
    - 如果找到文件 → PRD 就是这些文件
 
    **情况 C：没有文件（对话输入）**
@@ -150,7 +150,7 @@ $ARGUMENTS 可能包含：
 **加载 skill：** 使用 Skill 工具加载 `dev-flow:read-prd`
 
 按 skill 指导：
-- 读取所有 PRD 文件（MD 用 Read，PDF 用 Read 的 pages 参数）
+- 读取所有 PRD 文件（MD/HTML 用 Read 直接读，PDF 用 Read 的 pages 参数）
 - 提取每个需求的核心要点
 - 识别任务拆分和 ID
 - 输出需求理解摘要，向用户确认
@@ -321,7 +321,8 @@ D:/work/my-project/
 ## 错误处理
 
 - PRD 目录不存在 → 提示用户检查路径
-- PRD 目录为空（无 PDF/MD） → 提示用户确认目录
+- PRD 目录为空（无 PDF/MD/HTML） → 提示用户确认目录
 - 输出目录创建失败 → 提示权限问题
 - 读取 PDF 失败 → 提示用户转换为 MD 或手动提供需求内容
+- 遇到 Word（.doc/.docx）等不支持的格式 → 提示用户先另存为 PDF/MD 再运行
 - 状态文件损坏 → 提示用户删除状态文件重新开始
