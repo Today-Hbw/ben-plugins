@@ -128,12 +128,15 @@ Skill("uniplat:coding-guide")
 加载 `uniplat:coding-guide`，输出规范摘要：
 
 **核心要点**：
-- 项目结构：子项目（独立 Git） + models/ + services/ + consts/
-- JSON 格式：`field_defs` 数组、`action_defs`、`list`/`detail` 视图、`mapping_defs` 映射
+- 项目结构：子项目（独立 Git） + models/ + services/ + consts/（不创建 test 目录）
+- JSON 格式：`field_defs` 数组、`action_defs`、`list`/`detail` 视图、`mapping_defs` 映射、`dataFilters` 自动过滤
 - Groovy 格式：实例方法（非 static）、`def` 声明、`package models.分组`
+- **默认用平台内置 behavior**：insert/update/delete 不需要 Groovy 方法，只有自定义 behavior 才写
 - 钩子方法：Validator（AssertUtils 抛异常）、Behavior（返回 [result, id, msg]）、Updator（返回 Map）
-- Context 类：ActionValidatorContext、ActionBehaviorContext、ParameterUpdateMasterContext
+- **when 条件用 `?.value` 安全导航**：避免空指针
+- Context 类：ActionValidatorContext、ActionBehaviorContext、ParameterUpdateMasterContext、ModelEventContext
 - 数据访问：`obj.field.value`、`dataModel.queryDataList()`、`dataModel.insertByMap()`
+- 事件处理：`ModelEventContext` + `eventSubs` JSON 配置
 
 完整规范参见 `uniplat:coding-guide` skill。
 

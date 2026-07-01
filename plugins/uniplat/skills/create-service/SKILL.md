@@ -1,7 +1,7 @@
 ---
 name: create-service
 description: 创建 Uniplat 领域服务（DomainService）
-version: 1.0.1
+version: 1.0.2
 ---
 
 # 创建 Uniplat 领域服务
@@ -133,12 +133,6 @@ class {{service_name}} {
 
   API 端点：
     POST /general/project/{subproject}/service/passport_api/getUsersInfo
-    POST /general/project/{subproject}/service/passport_api/queryOrders
-
-  调用示例：
-    curl -X POST http://localhost:8000/general/project/hro_spview/service/passport_api/getUsersInfo \
-      -H "Content-Type: application/json" \
-      -d '{"userMemberIds": "1,2,3"}'
 ```
 
 ---
@@ -152,11 +146,9 @@ def query(GatewayContext ctx) {
     def host = Host.getInstance()
     def body = ctx.getBody()
 
-    // 获取分页参数
     def page = (body.get("page") ?: "1") as int
     def size = (body.get("size") ?: "20") as int
 
-    // 构建查询条件
     def conditions = [is_del: 0]
     if (body.get("status")) {
         conditions.status = body.get("status") as int
@@ -165,7 +157,6 @@ def query(GatewayContext ctx) {
     def model = host.getDataModel("system_user")
     def list = model.queryDataList(conditions)
 
-    // 手动分页
     def total = list.count()
     def items = list.list.drop((page - 1) * size).take(size)
 
@@ -204,11 +195,7 @@ def batchUpdate(GatewayContext ctx) {
         }
     }
 
-    return [
-        result: 0,
-        msg   : "操作成功",
-        count : ids.size()
-    ]
+    return [result: 0, msg: "操作成功", count: ids.size()]
 }
 ```
 
@@ -219,7 +206,6 @@ def crossModel(GatewayContext ctx) {
     def host = Host.getInstance()
     def body = ctx.getBody()
 
-    // 操作多个模型
     def userModel = host.getDataModel("system_user")
     def orgModel = host.getDataModel("system_org")
 
@@ -228,8 +214,6 @@ def crossModel(GatewayContext ctx) {
 
     AssertUtils.isTrue(user != null, "用户不存在")
     AssertUtils.isTrue(org != null, "组织不存在")
-
-    // 业务逻辑...
 
     return [result: 0, msg: "操作成功"]
 }
@@ -244,9 +228,9 @@ def callModelMethod(GatewayContext ctx) {
 
     // 调用模型 Groovy 中的方法
     def result = host.invokeModelFunc(
-        "system_user",           // 模型名
-        "getUserDisplay",        // 方法名
-        body.get("userId") as long  // 参数
+        "system_user",
+        "getUserDisplay",
+        body.get("userId") as long
     )
 
     return [result: 0, data: result]
@@ -263,11 +247,7 @@ def queryWithSql(GatewayContext ctx) {
     def body = ctx.getBody()
     def status = body.get("status") as int
 
-    // 获取数据源
     def ds = DataSourceFactory.getDataSource(DbConsts.HOST)
-    // 指定数据源：DataSourceFactory.getDataSource("mssql_finance")
-
-    // 查询
     def results = ds.queryForList(
         "SELECT * FROM system_user WHERE status = ? AND is_del = 0",
         status
@@ -293,31 +273,9 @@ def transactional(GatewayContext ctx) {
 
         obj.update([status: 1])
         // 更多操作...
-        // 任何异常都会回滚
     } as Runnable)
 
     return [result: 0, msg: "操作成功"]
-}
-```
-
-### 远程调用
-
-```groovy
-def remoteCall(GatewayContext ctx) {
-    def body = ctx.getBody()
-
-    // HTTP 调用
-    def url = "https://api.example.com/data"
-    def conn = new URL(url).openConnection() as HttpURLConnection
-    conn.requestMethod = "POST"
-    conn.setRequestProperty("Content-Type", "application/json")
-    conn.doOutput = true
-    conn.outputStream << new groovy.json.JsonBuilder(body).toString()
-
-    def response = conn.inputStream.text
-    def result = new groovy.json.JsonSlurper().parseText(response)
-
-    return result
 }
 ```
 
@@ -345,8 +303,7 @@ ctx.pathValue                    // 路径参数
 3. **所有方法都是实例方法**（不是 static），用 `def` 声明
 4. **参数类型是 `GatewayContext`**
 5. **获取 body 用 `ctx.getBody().get("key")`**，不是 `ctx.body.key`
-6. **获取 URL 参数用 `ctx.parameters["key"]?.getAt(0)`**
-7. **Host.getInstance() 获取单例**，也可用 `ctx.host`
-8. **返回值自动包装为 ApiResult**，直接返回 Map 或 List 即可
-9. **用 AssertUtils 做参数校验**，抛异常由平台统一处理
-10. **服务文件命名**：描述性 + `_api` 后缀（如 `passport_api`、`client_api`）
+6. **Host.getInstance() 获取单例**，也可用 `ctx.host`
+7. **返回值自动包装为 ApiResult**，直接返回 Map 或 List 即可
+8. **用 AssertUtils 做参数校验**
+9. **服务文件命名**：描述性 + `_api` 后缀
