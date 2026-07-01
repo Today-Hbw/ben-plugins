@@ -17,6 +17,17 @@
       "source": "./plugins/dev-flow",
       "category": "development",
       "homepage": "https://github.com/benbowenqwe/ben-plugins/tree/main/plugins/dev-flow"
+    },
+    {
+      "name": "uniplat",
+      "description": "Uniplat 低代码平台开发辅助：JSON+Groovy 模型/Action/服务脚手架与编码规范，让 Claude Code 快速准确地在 Uniplat 平台上开发",
+      "author": {
+        "name": "ben",
+        "email": "benbowenqwe@gmail.com"
+      },
+      "source": "./plugins/uniplat",
+      "category": "development",
+      "homepage": "https://github.com/benbowenqwe/ben-plugins/tree/main/plugins/uniplat"
     }
   ]
 }
