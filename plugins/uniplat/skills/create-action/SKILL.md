@@ -1,7 +1,7 @@
 ---
 name: create-action
 description: 为 Uniplat 模型新增 Action（业务操作），修改 JSON 配置 + Groovy 钩子方法
-version: 1.0.2
+version: 1.0.3
 ---
 
 # 创建 Uniplat Action
@@ -33,22 +33,47 @@ version: 1.0.2
 
 **只有自定义 behavior 才需要在 Groovy 中写方法。** 使用平台内置的 insert/update 不需要。
 
-### when 条件空值安全
+### when / enable：显示 vs 启用，用 object 先判非空
 
-当 `when` 使用 `object.field.value` 且字段可能为空时：
+action 上两个条件表达式含义不同：
+
+| 字段 | 含义 | 不满足时 |
+|------|------|---------|
+| `when` | 是否**显示** | 隐藏 |
+| `enable`（=`enabled`） | 是否**启用/可点击** | 置灰仍显示，不执行该逻辑 |
+
+`enable` 与 `enabled` 同义（`action_defs[]` 多写 `enable`，list 引用/intent 写 `enabled`），可与 `when` 并列。
+
+**空值铁律**：`when`/`enable` 引用 `object` 时**先 `object != null &&`**——`on:"list"`/`on:"none"` 等场景 `object` 为 null，直接点属性会 NPE：
 
 ```json
-// 安全写法（使用 ?. 安全导航）
-{"when": "object.status?.value as int == 0"}
-{"when": "object.field?.value"}
-{"when": "object.status?.value && object.type?.value == 'CORP'"}
+// ✅ 先守卫 object 非空
+{"when": "object != null && object.getValue('status') == 0"}
+{"enable": "object != null && object.getValue('status') == 0"}
+{"when": "object != null && (object.Status.value==2 || object.Status.value==3)"}
+// 关联/joint 字段用 object.get('本地键#joint名.字段').value
+{"when": "object != null && object.get('id#order_joint.OrderId').value != ''"}
+// 常量无需守卫
+{"when": "1"}
 
-// 确定有值的字段可以直接用
-{"when": "object.is_del?.value == 0"}
-{"when": "!object.is_del?.value"}
+// ❌ object 可能为空时直接点属性 → NPE
+{"when": "object.status.value == 0"}
 ```
 
-**注意**：列表行操作（`"on": "object"`）的 when 条件必须考虑空值，因为 object 可能来自不同的数据源。
+取值：`object.getValue('字段')`（推荐，无字段返回 null）或 `object.字段.value`（可空字段加 `?.`）。
+
+### on / tx：作用域与事务
+
+| 字段 | 取值 | 说明 |
+|------|------|------|
+| `on` | `object` \| `list` \| `none` \| `each` | action 作用域：单条行 / 整个列表 / 无数据(全局) / 逐条 |
+| `tx` | `true` \| `false` | 是否由容器自动管理事务 |
+
+```json
+{"name": "batch_close", "on": "list", "when": "1", "behavior": "batch_close", "tx": true}
+{"name": "approve", "on": "object", "when": "object != null && object.getValue('status')==0", "behavior": "approve_behavior"}
+```
+> `on:"object"` 的行操作，其 `when`/`enable` 必须做 `object != null` 守卫。
 
 ## 执行流程
 
@@ -78,7 +103,7 @@ when 条件：（默认 "1"，或表达式）
 ```json
 {
   "name": "publish",
-  "when": "object.status?.value as int == 0",
+  "when": "object != null && object.getValue('status') == 0",
   "label": "发布",
   "container": "none",
   "parameters": {
@@ -102,7 +127,7 @@ when 条件：（默认 "1"，或表达式）
 ```json
 {
   "name": "approve",
-  "when": "object.status?.value as int == 0",
+  "when": "object != null && object.getValue('status') == 0",
   "label": "审批",
   "container": "dialog",
   "parameters": {
@@ -193,7 +218,7 @@ def approve_behavior(ActionBehaviorContext ctx) {
 ```
 Action 已添加：
   名称：approve (审批)
-  显示条件：object.status?.value as int == 0
+  显示条件：object != null && object.getValue('status') == 0
   behavior：approve_behavior（自定义方法）
 
   已在 Groovy 中添加：
@@ -212,7 +237,7 @@ Action 已添加：
 ```json
 {
   "name": "publish",
-  "when": "object.status?.value as int == 0",
+  "when": "object != null && object.getValue('status') == 0",
   "label": "发布",
   "container": "none",
   "parameters": {
@@ -235,7 +260,7 @@ Action 已添加：
 ```json
 {
   "name": "delete",
-  "when": "!object.is_del?.value",
+  "when": "object != null && object.getValue('is_del') == 0",
   "label": "删除",
   "container": "none",
   "parameters": {
@@ -259,7 +284,7 @@ Action 已添加：
 ```json
 {
   "name": "approve",
-  "when": "object.status?.value as int == 0",
+  "when": "object != null && object.getValue('status') == 0",
   "label": "审批",
   "container": "dialog",
   "parameters": {
@@ -285,7 +310,7 @@ Action 已添加：
 ```json
 {
   "name": "setDefault",
-  "when": "!object.is_default?.value",
+  "when": "object != null && object.getValue('is_default') != 1",
   "on": "object",
   "label": "设为默认",
   "container": "dialog",
@@ -326,7 +351,7 @@ Action 已添加：
 ```json
 {
   "name": "submit_audit",
-  "when": "object.status?.value as int == 0 && object.audit_status?.value != 2",
+  "when": "object != null && object.getValue('status') == 0 && object.getValue('audit_status') != 2",
   "label": "提交审核",
   "container": "none",
   "parameters": {
@@ -348,7 +373,8 @@ Action 已添加：
 
 1. **优先使用平台内置 behavior**：insert/update/delete 不需要 Groovy 方法
 2. **只有自定义 behavior 才写 Groovy 方法**
-3. **when 条件用 `?.value` 安全导航**：特别是 `on: "object"` 的行操作
-4. **复合条件用 `&&` 或 `||`**：注意空值安全
+3. **`when`（显示）/`enable`（启用）引用 object 时先 `object != null &&`**：特别是 `on:"object"` 行操作
+4. **复合条件用 `&&` 或 `||`**：先 `object != null` 再判各字段
 5. **soft delete**：删除操作通常通过 `is_del=1` + `behavior: "update"` 实现
 6. **list.row_actions vs list.actions**：行操作放 row_actions，全局操作放 actions
+7. **on 决定作用域**（object/list/none/each），**tx 控制事务**

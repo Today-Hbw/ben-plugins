@@ -98,9 +98,9 @@ Skill("uniplat:coding-guide")
 ├── services/                ← 领域服务
 │   └── passport_api.groovy
 ├── monitors/
-├── dashboard/
-└── test/
+└── dashboard/
 ```
+（不含 test 目录：test 是废弃机制，不创建）
 
 ### 5. models 命令
 
@@ -128,15 +128,17 @@ Skill("uniplat:coding-guide")
 加载 `uniplat:coding-guide`，输出规范摘要：
 
 **核心要点**：
-- 项目结构：子项目（独立 Git） + models/ + services/ + consts/（不创建 test 目录）
-- JSON 格式：`field_defs` 数组、`action_defs`、`list`/`detail` 视图、`mapping_defs` 映射、`dataFilters` 自动过滤
-- Groovy 格式：实例方法（非 static）、`def` 声明、`package models.分组`
+- 项目结构：子项目（独立 Git） + models/ + services/ + consts/（**不创建 test 目录**，增删改查也无需 test）
+- JSON 格式：`field_defs`（type 有全枚举）、`action_defs`、`list`/`detail`、`mapping_defs`、`dataFilters`；action 还有 `on`(作用域)/`tx`(事务)/`enable`/`variables`；顶层还有 `sql`虚拟模型/`eventSubs` 等
+- Groovy 格式：实例方法（非 static）、`def` 声明、`package` **可选**（建议按分组目录）
 - **默认用平台内置 behavior**：insert/update/delete 不需要 Groovy 方法，只有自定义 behavior 才写
-- 钩子方法：Validator（AssertUtils 抛异常）、Behavior（返回 [result, id, msg]）、Updator（返回 Map）
-- **when 条件用 `?.value` 安全导航**：避免空指针
-- Context 类：ActionValidatorContext、ActionBehaviorContext、ParameterUpdateMasterContext、ModelEventContext
-- 数据访问：`obj.field.value`、`dataModel.queryDataList()`、`dataModel.insertByMap()`
-- 事件处理：`ModelEventContext` + `eventSubs` JSON 配置
+- 钩子方法：Validator（AssertUtils/ValidateException 抛异常）、Behavior（返回 **BehaviorResult** 或字典）、Updator（返回 Map）；另有 page_values_func、mapping/joint 自定义函数等
+- **`when`（显示）vs `enable`（启用）**：引用 object 时先 **`object != null &&`**
+- Context 类：Action(Validator/Behavior/CustomInit)Context、ParameterUpdate(Master/Detail)Context、ParameterChangeContext、ModelEventContext、ActionPageValuesFuncContext、FilterUpdateContext、GatewayContext/ModelServiceContext 等
+- 数据访问三类：DataModel（`queryDataList/getByKeyField/insertByMap/insert/update/deleteByMap/addLog/addRemark`）、DataObject（`getValue/getInt/getLong/get/update/delete/referTo`）、DataList（`fetchOne/one/asList/count/asStream`）
+- 获取过滤值：`masterParams`（ActionPageValuesFuncContext）/`getFilterValues`（FilterUpdateContext），**不在** ActionBehaviorContext
+- 服务端点：领域服务 7 种（标准/匿名/内部/SOA/流式/匿名流式/MVC）+ 模型服务；匿名在 service 后加 `anonymous`
+- 事件处理：`ModelEventContext` + `eventSubs` JSON 配置，取 host 用 `ctx.getHost()` 或 `Host.getInstance()`
 
 完整规范参见 `uniplat:coding-guide` skill。
 

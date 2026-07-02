@@ -1,7 +1,7 @@
 ---
 name: create-model
 description: 在指定子项目目录下创建 Uniplat 数据模型脚手架（JSON 元数据 + Groovy 钩子文件）
-version: 1.0.2
+version: 1.0.3
 ---
 
 # 创建 Uniplat 数据模型
@@ -326,6 +326,7 @@ package models.{{group}}
 import com.qinqinxiaobao.report.uniplat.engine.DO.DataObject
 import com.qinqinxiaobao.report.uniplat.executor.ActionBehaviorContext
 import com.qinqinxiaobao.report.uniplat.executor.ActionValidatorContext
+import com.qinqinxiaobao.report.uniplat.executor.BehaviorResult
 import com.qinqinxiaobao.report.uniplat.executor.ParameterUpdateMasterContext
 import com.qinqinxiaobao.report.uniplat.executor.ParameterChangeContext
 import com.qinqinxiaobao.report.uniplat.host.Host
@@ -362,7 +363,7 @@ class {{model_name}} {
             is_del       : 0
         ]).id
 
-        return [result: 0, id: id, msg: "添加成功"]
+        return [result: 0, id: id, msg: "添加成功"]   // 或 return new BehaviorResult(0, "添加成功", id)
     }
 }
 ```
@@ -401,22 +402,23 @@ class {{model_name}} {
 | `"customMethod"` | 自定义方法 | **需要**，Groovy 中定义 `def customMethod(ActionBehaviorContext ctx)` |
 | `""` | 空字符串，无行为 | 不需要（用于纯跳转、弹窗类） |
 
-### when 条件中的空值安全
+### when / enable 条件中的空值安全
 
-当 `when` 条件使用 `object.field.value` 时，如果字段可能为空，需要加空值判断：
+`when`=是否**显示**，`enable`（=`enabled`）=是否**启用**。二者引用 `object` 时**先 `object != null &&`**（列表级/无选中行时 object 为 null，直接点属性会 NPE）：
 
 ```json
-// 安全写法：先判断非空
-{"when": "object.status?.value as int == 0"}
+// ✅ 先守卫 object 非空
+{"when":   "object != null && object.getValue('status') == 0"}
+{"enable": "object != null && object.getValue('status') == 0"}
+// 关联/joint 字段：object.get('本地键#joint名.字段').value
+// 常量条件无需守卫
+{"when": "1"}
 
-// 或使用 Groovy 安全导航
-{"when": "object.field?.value"}
-
-// 复杂条件
-{"when": "object.status?.value && object.type?.value == 'CORP'"}
+// ❌ object 可能为空时直接点属性 → NPE
+{"when": "object.status.value == 0"}
 ```
 
-**注意**：对于必填字段或确定有值的字段（如 `is_del`），可以直接用 `object.is_del.value`。
+取值：`object.getValue('字段')`（推荐）或 `object.字段.value`（可空字段加 `?.`）。
 
 ### dataFilters 说明
 
@@ -432,7 +434,68 @@ class {{model_name}} {
 
 ### test 目录已废弃
 
-**不要创建 test 目录**。这是历史遗留机制，新项目不使用。
+**不要创建 test 目录**。这是历史遗留机制，新项目不使用（增删改查也无需 test）。
+
+### 字段类型（type）全枚举
+
+`field_defs[].type` 的取值（据 `datamodel.json` 的 `T_DATA_TYPE`）：
+
+```
+boolean, number, double, money, mapping, cascader, tree,
+date, datetime, text, longText, file, image, multi_file,
+multi_image, dynamic, enum, grid, search, multi_search,
+checkbox-group, hidden
+```
+
+- 常用：`text` / `number` / `double` / `money` / `mapping` / `date` / `datetime` / `longText` / `file` / `image` / `cascader` / `tree`。
+- ⚠️ Schema 自注：`enum`、`search`、`checkbox-group`、`hidden` 已标记废弃；`dynamic` 待新支持——新模型别用这几个。
+- `column` 定义可选：虚拟模型或不落库字段可不写 `column`。
+
+### action 高级字段：on / tx / enable / variables
+
+除 `name/when/label/container/parameters/behavior/forward/prompt` 外，action 常用：
+
+| 字段 | 取值 | 说明 |
+|------|------|------|
+| `on` | `object`/`list`/`none`/`each` | 作用域：单条行 / 整表 / 全局 / 逐条 |
+| `tx` | `true`/`false` | 是否容器自动管理事务 |
+| `enable`(=`enabled`) | 表达式 | 是否启用（与 `when` 显示区分）；引用 object 先 `object != null &&` |
+| `variables` | `[{name,defaultValue}]` | action 级状态变量，property2 算初值、execute 时 `ctx.variables` 可读 |
+| `validator` | 方法名 | 指定校验方法 |
+| `customInitFunc` | 方法名 | 动态生成/改写 ActionDef |
+| `open_in_new_tab` | `true`/`false` | forward 后新标签打开 |
+
+### 顶层字段速查（除已示范的常规字段外）
+
+| 字段 | 说明 |
+|------|------|
+| `sql` | 虚拟模型：不绑实体表，用 SQL 定义（仅查询） |
+| `eventSubs` | 模型事件订阅：`[{action, handler}]` |
+| `group_sums` | 列表合计行的聚合字段 |
+| `objectTitle` | 对象标题模板 |
+| `mini_detail` | 简略详情（悬停展示） |
+| `mapping_refs` / `joint_refs` | 引用外部 mapping / joint 定义 |
+
+### mapping_defs / joint_defs / detail 的增强写法
+
+```json
+// mapping_defs：除 mapping_values，还可用 sql 或自定义函数
+{"name": "city_mapping", "database": "(host)", "sql": "SELECT id, name FROM district WHERE is_del=0"}
+{"name": "app_mapping", "custom_func": "app_mapping_func"}
+
+// joint_defs：除 sql，还可用自定义函数 + 搜索配置
+{
+  "name": "user", "custom_function": "user_joint",
+  "custom_function_search": [{"key": "mobile", "label": "手机"}, {"key": "name", "label": "姓名"}],
+  "key_field": "puid", "joint_field": "puid", "field_defs": [ ... ]
+}
+
+// detail：pages 可嵌套 list（从表），detail 根级可有 sections
+"detail": {
+  "pages": [{"name": "orders", "label": "订单", "sections": [], "list": { ... }}],
+  "sections": [ ... ]
+}
+```
 
 ---
 
@@ -440,6 +503,7 @@ class {{model_name}} {
 
 1. **默认使用平台内置 behavior**：insert/update/delete 不需要写 Groovy 方法
 2. **dataFilters 用于自动过滤**：特别是 `is_del = 0` 软删除过滤
-3. **when 条件注意空值安全**：使用 `?.value` 安全导航
+3. **`when`/`enable` 引用 object 时先 `object != null &&`**：取值优先 `object.getValue('字段')`
 4. **不创建 test 目录**：这是废弃机制
 5. **参考相似模型**：生成前先用 Glob 找类似的现有模型参考
+6. **自定义 behavior 返回 `BehaviorResult`（推荐）或字典**，需 import BehaviorResult

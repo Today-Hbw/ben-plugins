@@ -1,7 +1,7 @@
 ---
 name: create-service
 description: 创建 Uniplat 领域服务（DomainService）
-version: 1.0.2
+version: 1.0.3
 ---
 
 # 创建 Uniplat 领域服务
@@ -134,6 +134,44 @@ class {{service_name}} {
   API 端点：
     POST /general/project/{subproject}/service/passport_api/getUsersInfo
 ```
+
+---
+
+## 服务端点与类型
+
+**领域服务（DomainService，绑定子项目/领域）**——共 7 种，路径前缀 `/general/project`（SOA 除外），方法参数用对应上下文类：
+
+| 类型 | 端点 | 上下文类 | 认证 |
+|------|------|---------|------|
+| 标准服务 | `/general/project/{子项目}/service/{类}/{方法}` | `GatewayContext` | 需认证 |
+| 匿名服务 | `/general/project/{子项目}/service/anonymous/{类}/{方法}` | `AnonymousGatewayContext` | 免登录 |
+| 内部服务 | `/general/project/{子项目}/internal_service/{类}/{方法}` | `InternalDomainServiceContext` | 内部 Token |
+| SOA 服务 | `/soa/{子项目}/{类}/{方法}` | `GatewayContext` | SOA 集成 |
+| SSE 流式 | `/general/project/{子项目}/stream/{类}/{方法}` | `StreamApiContext` | 需认证 |
+| 匿名流式 | `/general/project/{子项目}/stream/anonymous/{类}/{方法}` | `AnonymousStreamApiContext` | 免登录 |
+| MVC 控制器 | `/general/project/{子项目}/ctrl/{类}/{方法}` | `ControllerContext` | MVC 风格 |
+
+例（匿名服务）：`POST /general/project/hro_spview/service/anonymous/tools_api/it_year_result`
+
+**模型服务（ModelService，绑定具体模型）**——入口是模型名，自动拿到对应 DataModel：
+
+| 类型 | 端点 | 上下文类 |
+|------|------|---------|
+| 模型服务 | `/general/model/{模型}/service/{方法}` | `ModelServiceContext` |
+| 匿名模型服务 | `/general/model/{模型}/service/anonymous/{方法}` | `AnonymousModelServiceContext` |
+
+```groovy
+// 模型服务写在模型的 .groovy 里，参数用 ModelServiceContext
+import com.qinqinxiaobao.report.uniplat.models.service.ModelServiceContext
+
+def exportData(ModelServiceContext ctx) {
+    def model = ctx.dataModel          // 自动绑定当前模型
+    def list = model.queryDataList([is_del: 0])
+    return list.asList().collect { [id: it.getKeyValue(), name: it.getValue("name")] }
+}
+```
+
+> **DomainService 与 ModelService 的区别**：前者绑定领域（`services/` 下、参数 `GatewayContext`），后者绑定模型（写在模型 groovy 里、参数 `ModelServiceContext`）。
 
 ---
 
@@ -284,26 +322,49 @@ def transactional(GatewayContext ctx) {
 ## GatewayContext 字段速查
 
 ```groovy
-ctx.getBody()                    // Map 请求体
-ctx.getBody().get("key")         // 获取 body 参数
-ctx.getBody().get("key")?.toString()  // 安全获取字符串
-ctx.parameters                   // Map<String, String[]> URL 参数
-ctx.parameters["key"]?.getAt(0)  // 取第一个 URL 参数
-ctx.request                      // HttpServletRequest
-ctx.request.getHeader("X-xxx")   // 获取请求头
-ctx.pathValue                    // 路径参数
+// body 参数（两种写法皆可）
+ctx.getBody()                     // Map 请求体
+ctx.getBody().get("key")          // 取 body 参数
+ctx.body.key                      // 直接属性访问 body 字段（真实项目常用）
+ctx.getBody(SomeDto.class)        // 直接反序列化为 DTO
+
+// URL 参数：类型化取参（推荐）
+ctx.getStringParam("key")         // 字符串
+ctx.getStringParam("key", "默认") // 带默认值
+ctx.getIntParam("page", 0)        // 整数 + 默认
+ctx.getLongParam("id")            // 长整数
+ctx.getBigDecimalParam("amount")  // BigDecimal
+ctx.parameters                    // Map<String, String[]> 原始 URL 参数（值是数组）
+ctx.parameters["key"]?.getAt(0)   // 取第一个原始 URL 参数
+
+// 其他
+ctx.getRequest()                  // 或 ctx.request，HttpServletRequest
+ctx.request.getHeader("X-xxx")    // 获取请求头
+ctx.pathValue                     // 路径参数
+ctx.host                          // Host（等价 Host.getInstance()）
+```
+
+## Host 常用方法（服务里）
+
+```groovy
+def host = ctx.host                        // 或 Host.getInstance()
+host.getUser()                             // 当前用户（也可 ctx.host.user）
+host.getTimestamp()                        // 当前时间戳
+host.getDataModel("system_user")           // 取数据模型
+host.invokeModelFunc("模型", "方法", args)  // 调用模型 Groovy 方法
+host.callUtilMethod("子项目", "工具类", "方法", args...)  // 调用领域工具类方法
 ```
 
 ---
 
 ## 注意事项
 
-1. **package 声明**：`package services`
+1. **package 声明**：`services/` 直放用 `package services`；放在子目录（如 `services/system/`）则用多级包 `package services.system`
 2. **类名与文件名一致**：`passport_api.groovy` → `class passport_api`
-3. **所有方法都是实例方法**（不是 static），用 `def` 声明
-4. **参数类型是 `GatewayContext`**
-5. **获取 body 用 `ctx.getBody().get("key")`**，不是 `ctx.body.key`
+3. **方法用实例方法 `def`**（参考项目实测）；⚠️ 部分文档写 `static Object f(GatewayContext)`，以参考项目的实例 `def` 为准
+4. **参数类型按服务类型选**：标准 `GatewayContext`、匿名 `AnonymousGatewayContext`、流式 `StreamApiContext`、模型服务 `ModelServiceContext`（见「服务端点与类型」）
+5. **取 body**：`ctx.getBody().get("key")` 或 `ctx.body.key` 皆可；URL 参数用 `ctx.getStringParam/getIntParam/getLongParam`
 6. **Host.getInstance() 获取单例**，也可用 `ctx.host`
-7. **返回值自动包装为 ApiResult**，直接返回 Map 或 List 即可
+7. **返回值**：简单场景直接返回 Map/List（平台包装为 ApiResult）；复杂/泛型可显式 `new ApiResult<>(data)`
 8. **用 AssertUtils 做参数校验**
 9. **服务文件命名**：描述性 + `_api` 后缀
