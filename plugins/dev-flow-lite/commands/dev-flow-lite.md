@@ -10,7 +10,7 @@ allowed-tools: ["Read", "Write", "Glob", "Grep", "AskUserQuestion", "TodoWrite",
 
 ## 参数解析
 
-$ARGUMENTS 为 PRD 来源路径，支持两种形式：
+$ARGUMENTS 为 PRD 来源路径，支持以下形式：
 
 1. **指向文件**：该文件就是 PRD（支持 PDF/MD/HTML）
 2. **指向目录**：用 Glob 扫描目录中的 `.pdf`、`.md`、`.html`、`.htm` 文件作为 PRD
