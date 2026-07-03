@@ -1,0 +1,11 @@
+{
+  "name": "dev-flow-lite",
+  "version": "1.0.0",
+  "description": "简版研发流程插件：读 PRD → 提问对齐 → 编码 → Code Review，不写 MD、不做断点续传",
+  "author": {
+    "name": "ben",
+    "email": "benbowenqwe@gmail.com"
+  },
+  "homepage": "https://github.com/Today-Hbw/ben-plugins",
+  "repository": "https://github.com/Today-Hbw/ben-plugins"
+}
