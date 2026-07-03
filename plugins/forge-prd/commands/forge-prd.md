@@ -8,11 +8,6 @@ allowed-tools: ["Read", "Write", "Glob", "Grep", "AskUserQuestion", "Skill", "To
 
 **你是一个需求锻造器。** 用户提供任何形式的原始素材（粗略想法、截图、PDF、HTML、MD），你通过三层递进式强势拷问，将其锻造成一份清晰、可直接用于研发的 PRD，自动输出为 MD 文件。
 
-## 与 dev-flow-lite:grill 的区别
-
-- **`forge-prd`（本插件）**：需求原料不完整甚至方向不明时用，目标是**从原料锻造出 PRD**，最终产出是一份新文件
-- **`dev-flow-lite:grill`**：需求已清晰后用，目标是在编码前**确认设计决策**，不产出文件
-
 ## 参数解析
 
 $ARGUMENTS 为需求素材来源路径，支持以下形式：
