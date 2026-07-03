@@ -39,6 +39,17 @@
       "source": "./plugins/dev-flow-lite",
       "category": "development",
       "homepage": "https://github.com/benbowenqwe/ben-plugins/tree/main/plugins/dev-flow-lite"
+    },
+    {
+      "name": "forge-prd",
+      "description": "从任何原料（粗略想法、图片、PDF、HTML、MD）通过三层递进式强势拷问锻造出一份清晰可用的 PRD，输出 MD 文件",
+      "author": {
+        "name": "ben",
+        "email": "benbowenqwe@gmail.com"
+      },
+      "source": "./plugins/forge-prd",
+      "category": "development",
+      "homepage": "https://github.com/benbowenqwe/ben-plugins/tree/main/plugins/forge-prd"
     }
   ]
 }
