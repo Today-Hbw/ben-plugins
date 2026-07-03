@@ -43,9 +43,9 @@ v3-refrom/                          # 工作区根目录
 │   └── config/schemas/             # JSON Schema 定义（开发参考）
 ├── uniplat_base/                   # 基础领域子项目
 ├── uniplat_common/                 # 公共领域子项目
-├── hro/                            # 业务工作区（含多个子项目）
-│   ├── bank_account/               # 子项目（独立 Git）
-│   ├── hro_spview/                 # 子项目（独立 Git）
+├── biz/                            # 业务工作区（含多个子项目）
+│   ├── account/                    # 子项目（独立 Git）
+│   ├── biz_spview/                 # 子项目（独立 Git）
 │   └── ...
 ```
 
@@ -314,15 +314,15 @@ action 上有两个条件表达式，**含义不同**：
 // 建议按分组目录声明以便组织，如 package models.system。
 package models.system
 
-import com.qinqinxiaobao.report.uniplat.engine.DO.DataObject
-import com.qinqinxiaobao.report.uniplat.executor.ActionBehaviorContext
-import com.qinqinxiaobao.report.uniplat.executor.ActionValidatorContext
-import com.qinqinxiaobao.report.uniplat.executor.BehaviorResult          // 自定义 behavior 返回类型（常用）
-import com.qinqinxiaobao.report.uniplat.executor.ParameterUpdateMasterContext
-import com.qinqinxiaobao.report.uniplat.executor.ParameterChangeContext
-import com.qinqinxiaobao.report.uniplat.models.event.ModelEventContext
-import com.qinqinxiaobao.report.uniplat.host.Host
-import com.qinqinxiaobao.report.utils.AssertUtils
+import com.example.report.uniplat.engine.DO.DataObject
+import com.example.report.uniplat.executor.ActionBehaviorContext
+import com.example.report.uniplat.executor.ActionValidatorContext
+import com.example.report.uniplat.executor.BehaviorResult          // 自定义 behavior 返回类型（常用）
+import com.example.report.uniplat.executor.ParameterUpdateMasterContext
+import com.example.report.uniplat.executor.ParameterChangeContext
+import com.example.report.uniplat.models.event.ModelEventContext
+import com.example.report.uniplat.host.Host
+import com.example.report.utils.AssertUtils
 
 class model_name {
     def model_name = "model_name"
@@ -366,7 +366,7 @@ class model_name {
 两种都被平台接受，参考项目里 `BehaviorResult` 更常用：
 
 ```groovy
-import com.qinqinxiaobao.report.uniplat.executor.BehaviorResult
+import com.example.report.uniplat.executor.BehaviorResult
 
 // 方式 A：BehaviorResult 类（推荐）
 def approve_behavior(ActionBehaviorContext ctx) {
@@ -569,7 +569,7 @@ def xid = env.getXid()               // 当前组织 ID
 在 Groovy 中处理模型数据变更事件：
 
 ```groovy
-import com.qinqinxiaobao.report.uniplat.models.event.ModelEventContext
+import com.example.report.uniplat.models.event.ModelEventContext
 
 class model_name {
     def model_name = "model_name"
@@ -617,8 +617,8 @@ host.sendModelEvent("model_name", "custom_action", dataObject)
 ```groovy
 package services
 
-import com.qinqinxiaobao.report.uniplat.gateway.GatewayContext
-import com.qinqinxiaobao.report.uniplat.host.Host
+import com.example.report.uniplat.gateway.GatewayContext
+import com.example.report.uniplat.host.Host
 
 class service_name_api {
 
@@ -679,8 +679,8 @@ list 中加过滤：
 ### 6.2 事务处理
 
 ```groovy
-import com.qinqinxiaobao.report.db.DataSourceFactory
-import com.qinqinxiaobao.report.db.DbConsts
+import com.example.report.db.DataSourceFactory
+import com.example.report.db.DbConsts
 
 DataSourceFactory.transaction(DbConsts.HOST, {
     obj1.update()
@@ -691,8 +691,8 @@ DataSourceFactory.transaction(DbConsts.HOST, {
 ### 6.3 直接 SQL 查询
 
 ```groovy
-import com.qinqinxiaobao.report.db.DataSourceFactory
-import com.qinqinxiaobao.report.db.DbConsts
+import com.example.report.db.DataSourceFactory
+import com.example.report.db.DbConsts
 
 def ds = DataSourceFactory.getDataSource(DbConsts.HOST)
 def results = ds.queryForList("SELECT * FROM table WHERE status = ?", 1)
@@ -721,7 +721,7 @@ def my_updator(ParameterUpdateMasterContext context) {
 用 `ctx.masterParams.get("字段")` 读列表的预过滤参数（masterParams）：
 
 ```groovy
-import com.qinqinxiaobao.report.uniplat.host.ActionPageValuesFuncContext
+import com.example.report.uniplat.host.ActionPageValuesFuncContext
 
 def emplyeeInAgentNumber_func(ActionPageValuesFuncContext ctx) {
     def emplyeeInId = ctx.masterParams.get("EmplyeeInId")     // 读预过滤参数
@@ -734,7 +734,7 @@ def emplyeeInAgentNumber_func(ActionPageValuesFuncContext ctx) {
 用 `ctx.getFilterValues().get("字段")` 或 `ctx.filterValues.getAt("字段")` 读当前筛选值：
 
 ```groovy
-import com.qinqinxiaobao.report.uniplat.host.FilterUpdateContext
+import com.example.report.uniplat.host.FilterUpdateContext
 
 def group_updator(FilterUpdateContext ctx) {
     def sender = ctx.sender
@@ -776,8 +776,8 @@ def userId = ctx.env.user_id.value    // 当前用户
 | Context 类源码 | `uniplat-main/src/main/java/.../executor/`（Action*/Parameter* 上下文）、`.../host/`（PageValuesFunc/FilterUpdate 上下文） |
 | 基础模型 | `uniplat_base/models/` |
 | 公共模型 | `uniplat_common/models/` |
-| 业务模型 | `hro/{子项目}/models/` |
-| 领域服务 | `hro/{子项目}/services/` |
+| 业务模型 | `biz/{子项目}/models/` |
+| 领域服务 | `biz/{子项目}/services/` |
 | 常量定义 | `{子项目}/consts/` |
 
 ---

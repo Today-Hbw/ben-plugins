@@ -107,12 +107,12 @@ Skill("uniplat:coding-guide")
 列出子项目下所有模型：
 
 ```
-子项目：hro_spview
+子项目：biz_spview
 模型列表：
   - system_user (system_user)
     - Actions: insert, update, delete
     - 分组：system
-  - HRO_EnterpriseBalanceRefundOrder (HRO_BalanceRefundOrder)
+  - EnterpriseBalanceRefundOrder (BalanceRefundOrder)
     - Actions: rst_account_detail_list, rst_account_reception
     - 分组：business/order
   ...

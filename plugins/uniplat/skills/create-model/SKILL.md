@@ -18,7 +18,7 @@ version: 1.0.3
 
 示例：
 - `pay_order` → 创建 pay_order 模型
-- `HRO_BalanceRefundOrder /path/to/subproject business/order` → 在指定分组创建
+- `BalanceRefundOrder /path/to/subproject business/order` → 在指定分组创建
 
 ## 执行流程
 
@@ -287,10 +287,10 @@ version: 1.0.3
 ```groovy
 package models.{{group}}
 
-import com.qinqinxiaobao.report.uniplat.engine.DO.DataObject
-import com.qinqinxiaobao.report.uniplat.executor.ParameterUpdateMasterContext
-import com.qinqinxiaobao.report.uniplat.executor.ParameterChangeContext
-import com.qinqinxiaobao.report.uniplat.host.Host
+import com.example.report.uniplat.engine.DO.DataObject
+import com.example.report.uniplat.executor.ParameterUpdateMasterContext
+import com.example.report.uniplat.executor.ParameterChangeContext
+import com.example.report.uniplat.host.Host
 
 class {{model_name}} {
     def model_name = "{{model_name}}"
@@ -323,14 +323,14 @@ class {{model_name}} {
 ```groovy
 package models.{{group}}
 
-import com.qinqinxiaobao.report.uniplat.engine.DO.DataObject
-import com.qinqinxiaobao.report.uniplat.executor.ActionBehaviorContext
-import com.qinqinxiaobao.report.uniplat.executor.ActionValidatorContext
-import com.qinqinxiaobao.report.uniplat.executor.BehaviorResult
-import com.qinqinxiaobao.report.uniplat.executor.ParameterUpdateMasterContext
-import com.qinqinxiaobao.report.uniplat.executor.ParameterChangeContext
-import com.qinqinxiaobao.report.uniplat.host.Host
-import com.qinqinxiaobao.report.utils.AssertUtils
+import com.example.report.uniplat.engine.DO.DataObject
+import com.example.report.uniplat.executor.ActionBehaviorContext
+import com.example.report.uniplat.executor.ActionValidatorContext
+import com.example.report.uniplat.executor.BehaviorResult
+import com.example.report.uniplat.executor.ParameterUpdateMasterContext
+import com.example.report.uniplat.executor.ParameterChangeContext
+import com.example.report.uniplat.host.Host
+import com.example.report.utils.AssertUtils
 
 class {{model_name}} {
     def model_name = "{{model_name}}"

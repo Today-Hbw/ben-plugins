@@ -40,11 +40,11 @@ version: 1.0.3
 ```groovy
 package services
 
-import com.qinqinxiaobao.report.uniplat.gateway.GatewayContext
-import com.qinqinxiaobao.report.uniplat.host.Host
-import com.qinqinxiaobao.report.uniplat.engine.DO.DataObject
-import com.qinqinxiaobao.report.utils.AssertUtils
-import com.qinqinxiaobao.report.utils.StringUtils
+import com.example.report.uniplat.gateway.GatewayContext
+import com.example.report.uniplat.host.Host
+import com.example.report.uniplat.engine.DO.DataObject
+import com.example.report.utils.AssertUtils
+import com.example.report.utils.StringUtils
 
 class {{service_name}} {
 
@@ -151,7 +151,7 @@ class {{service_name}} {
 | 匿名流式 | `/general/project/{子项目}/stream/anonymous/{类}/{方法}` | `AnonymousStreamApiContext` | 免登录 |
 | MVC 控制器 | `/general/project/{子项目}/ctrl/{类}/{方法}` | `ControllerContext` | MVC 风格 |
 
-例（匿名服务）：`POST /general/project/hro_spview/service/anonymous/tools_api/it_year_result`
+例（匿名服务）：`POST /general/project/biz_spview/service/anonymous/tools_api/it_year_result`
 
 **模型服务（ModelService，绑定具体模型）**——入口是模型名，自动拿到对应 DataModel：
 
@@ -162,7 +162,7 @@ class {{service_name}} {
 
 ```groovy
 // 模型服务写在模型的 .groovy 里，参数用 ModelServiceContext
-import com.qinqinxiaobao.report.uniplat.models.service.ModelServiceContext
+import com.example.report.uniplat.models.service.ModelServiceContext
 
 def exportData(ModelServiceContext ctx) {
     def model = ctx.dataModel          // 自动绑定当前模型
@@ -278,8 +278,8 @@ def callModelMethod(GatewayContext ctx) {
 ### 直接 SQL 查询
 
 ```groovy
-import com.qinqinxiaobao.report.db.DataSourceFactory
-import com.qinqinxiaobao.report.db.DbConsts
+import com.example.report.db.DataSourceFactory
+import com.example.report.db.DbConsts
 
 def queryWithSql(GatewayContext ctx) {
     def body = ctx.getBody()
@@ -298,8 +298,8 @@ def queryWithSql(GatewayContext ctx) {
 ### 事务处理
 
 ```groovy
-import com.qinqinxiaobao.report.db.DataSourceFactory
-import com.qinqinxiaobao.report.db.DbConsts
+import com.example.report.db.DataSourceFactory
+import com.example.report.db.DbConsts
 
 def transactional(GatewayContext ctx) {
     def host = Host.getInstance()
