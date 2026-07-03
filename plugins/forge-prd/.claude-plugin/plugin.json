@@ -1,0 +1,11 @@
+{
+  "name": "forge-prd",
+  "version": "1.0.0",
+  "description": "从任何原料（粗略想法、图片、PDF、HTML、MD）通过强势拷问锻造出一份清晰可用的 PRD，输出 MD 文件。",
+  "author": {
+    "name": "ben",
+    "email": "benbowenqwe@gmail.com"
+  },
+  "homepage": "https://github.com/Today-Hbw/ben-plugins",
+  "repository": "https://github.com/Today-Hbw/ben-plugins"
+}
