@@ -162,7 +162,7 @@ JSON Schema 文件位置：
 
 本插件设计为与 `dev-flow` 研发流程插件**完全解耦**，通过项目配置文件协同：
 
-### 在 Uniplat 项目中使用 dev-flow
+### 在 Uniplat 项目中使用 dev-flow / dev-flow-lite
 
 1. 在工作区或子项目根目录创建 `.claude/CLAUDE.md`：
 
@@ -171,6 +171,7 @@ JSON Schema 文件位置：
 
 ## 研发流程
 使用 `/dev-flow` 插件管理完整研发流程。
+小需求也可使用 `/dev-flow-lite`（4 步精简流程，不写 MD 文件）。
 
 ## 平台规范
 本项目基于 Uniplat 低代码平台开发，编码时必须遵守：
@@ -181,7 +182,7 @@ JSON Schema 文件位置：
 - JSON Schema 参考：uniplat-main/config/schemas/datamodel.json
 ```
 
-2. 在项目目录下运行 `/dev-flow`，流程会自动识别 Uniplat 项目并按平台规范开发。
+2. 在项目目录下运行 `/dev-flow` 或 `/dev-flow-lite`，流程会自动识别 Uniplat 项目并按平台规范开发。
 
 ### 单独使用 uniplat
 

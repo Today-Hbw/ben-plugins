@@ -28,6 +28,17 @@
       "source": "./plugins/uniplat",
       "category": "development",
       "homepage": "https://github.com/benbowenqwe/ben-plugins/tree/main/plugins/uniplat"
+    },
+    {
+      "name": "dev-flow-lite",
+      "description": "简版研发流程插件：读 PRD → 提问对齐 → 编码 → Code Review，不写 MD、不做断点续传，适合小需求快速迭代",
+      "author": {
+        "name": "ben",
+        "email": "benbowenqwe@gmail.com"
+      },
+      "source": "./plugins/dev-flow-lite",
+      "category": "development",
+      "homepage": "https://github.com/benbowenqwe/ben-plugins/tree/main/plugins/dev-flow-lite"
     }
   ]
 }

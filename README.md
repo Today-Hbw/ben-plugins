@@ -13,6 +13,7 @@ ben 的 Claude Code 插件集合，包含个人研发流程等自定义插件。
 ```
 /plugin marketplace add Today-Hbw/ben-plugins
 /plugin install dev-flow@ben-plugins
+/plugin install dev-flow-lite@ben-plugins
 
 
 # 指定版本
@@ -28,6 +29,8 @@ ben 的 Claude Code 插件集合，包含个人研发流程等自定义插件。
 | 插件 | 说明 |
 |------|------|
 | [dev-flow](plugins/dev-flow) | 从 PRD 到交付的完整 8 步研发工作流 |
+| [dev-flow-lite](plugins/dev-flow-lite) | 简版研发流程：读 PRD → 提问 → 编码 → CR（不写 MD、不断点续传） |
+| [uniplat](plugins/uniplat) | Uniplat 低代码平台开发辅助插件 |
 
 ## 插件结构
 
