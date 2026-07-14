@@ -41,7 +41,10 @@ cd D:/path/to/ben-workspace/项目名/迭代名/人名_YYYYMMDD
 /dev-flow --from 4      # 从步骤 4 开始
 /dev-flow --only 3      # 只做步骤 3（问答记录）
 /dev-flow --resume      # 从上次中断处继续
+/dev-flow --overview    # 维护工作区 总览.md 进度索引（默认不碰）
 ```
+
+`--overview` 会在需求确认后登记到 `总览.md` 的「在办」，交付后挪到「已完成」；不传则完全不碰 `总览.md`。需 PRD 位于 `Prd/` 工作区结构下才能定位。
 
 ## 输出目录结构
 
