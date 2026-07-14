@@ -40,31 +40,20 @@ cd D:/path/to/prd/
 /dev-flow-lite
 ```
 
-## 配置文件
+## 无需配置
 
-与完整版 dev-flow 共用同一个配置文件，放在 `~/.claude/dev-flow.config.md`（全局）或项目的 `.claude/dev-flow.config.md`（项目优先）。lite 只读取 `## 个人偏好` 部分（编码风格、沟通偏好等），忽略 `person` 等 frontmatter 字段。
-
-```markdown
----
-person: ben          # 仅完整版使用，lite 忽略
-language: zh-CN
----
-
-## 个人偏好
-（自定义编码习惯、命名规范等）
-```
+lite 开箱即用，不读取任何配置文件，也不依赖 dev-flow。对话默认中文，流程规则全部内置在命令中。
 
 ## 插件结构
 
 ```
 dev-flow-lite/
-├── commands/dev-flow-lite.md       # 主命令（4 步编排）
-├── skills/
-│   ├── read-prd/SKILL.md          # 读 PRD 方法
-│   ├── grill/SKILL.md             # 提问策略（决策树遍历）
-│   ├── implement/SKILL.md         # 编码实现（垂直切片）
-│   └── code-review/SKILL.md       # CR 检查项（验证前置）
-└── config/default-config.md       # 配置模板
+├── commands/dev-flow-lite.md      # 主命令（4 步编排）
+└── skills/
+    ├── read-prd/SKILL.md          # 读 PRD 方法
+    ├── grill/SKILL.md             # 提问策略（决策树遍历）
+    ├── implement/SKILL.md         # 编码实现（垂直切片）
+    └── code-review/SKILL.md       # CR 检查项（验证前置）
 ```
 
 ## License
