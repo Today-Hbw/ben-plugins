@@ -18,19 +18,7 @@ $ARGUMENTS 为 PRD 来源路径，支持以下形式：
 
 ## 执行流程
 
-### 第 0 步：环境准备
-
-1. **读取个人偏好（可选）**：
-   - 先读项目 `.claude/dev-flow.config.md`，再读全局 `~/.claude/dev-flow.config.md`（项目配置优先）
-   - 读取 `## 个人偏好` 部分，编码时参考（如命名规范、沟通风格等）
-   - 没有配置文件 → 使用默认行为，不阻塞流程
-
-2. **确定 PRD 来源**：
-   - 路径指向文件 → 该文件就是 PRD
-   - 路径指向目录 → Glob 扫描 PRD 文件
-   - 无文件 → 从对话上下文获取，用 AskUserQuestion 确认
-
-3. 用 TodoWrite 创建 4 步任务清单
+开始前，用 TodoWrite 创建 4 步任务清单（读 PRD → 提问对齐 → 编码 → Code Review）。PRD 来源判断见上方「参数解析」。
 
 ### 第 1 步：读 PRD
 
