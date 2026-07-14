@@ -1,6 +1,6 @@
 {
   "name": "dev-flow-lite",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "简版研发流程插件：读 PRD → 提问对齐 → 编码 → Code Review，不写 MD、不做断点续传",
   "author": {
     "name": "ben",
