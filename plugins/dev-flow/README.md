@@ -24,13 +24,13 @@
 ### 传入 PRD 目录路径
 
 ```bash
-/dev-flow D:/path/to/ben-workspace/项目名/迭代名/人名_YYYYMMDD
+/dev-flow D:/path/to/ben-workspace/Prd/项目名/已交付/YYYYMMDD
 ```
 
 ### 当前目录就是 PRD
 
 ```bash
-cd D:/path/to/ben-workspace/项目名/迭代名/人名_YYYYMMDD
+cd D:/path/to/ben-workspace/Prd/项目名/已交付/YYYYMMDD
 /dev-flow
 ```
 
@@ -48,22 +48,24 @@ cd D:/path/to/ben-workspace/项目名/迭代名/人名_YYYYMMDD
 
 ## 输出目录结构
 
-Claude 输出目录根据 PRD 的位置自动创建。批次目录按当天日期自动归集，每次运行新建一个带时间戳的会话目录：
+Claude 输出目录根据 PRD 的位置自动创建。批次目录镜像 PRD 日期目录名，每次运行新建一个带时间戳的会话目录：
 
 ### 有项目结构时
 
 ```
 ben-workspace/
 ├── Prd/
-│   └── 亲亲创客合伙人二期/              ← PRD 项目
-│       ├── all/                        ← 公共 PRD（唯一数据源）
-│       └── ben_20260630/               ← 你的批次目录
-│           └── 分配.md                 ← 索引文件
+│   └── sui-yin-ji/                    ← PRD 项目
+│       ├── 初始化/                       ← 状态目录
+│       ├── 进行中/
+│       ├── 已交付/
+│       │   └── 20260708/                ← 日期目录（含 需求.md）
+│       └── 待排期/
 │
 └── Claude/
-    └── 亲亲创客合伙人二期/              ← 镜像 PRD 的项目层级
-        └── ben_20260630/               ← 批次目录（按当天日期）
-            └── ben__20260630153000/    ← 会话目录
+    └── sui-yin-ji/                      ← 镜像 PRD 的项目层级
+        └── 20260708/                    ← 批次目录（镜像 PRD 日期目录名）
+            └── ben__20260708114237/     ← 会话目录
                 ├── 问答记录.md
                 ├── 任务名_ID001/计划.md
                 └── 总结.md
@@ -75,8 +77,8 @@ PRD 只是一个普通目录或文件：
 
 ```
 D:/work/my-project/
-├── prd/需求.md                             ← PRD 文件
-└── Claude/ben_20260630/ben__20260630153000/ ← 输出
+├── prd/需求.md                          ← PRD 文件
+└── Claude/20260708/ben__20260708114237/ ← 输出
 ```
 
 ### 对话输入（无文件）
@@ -84,7 +86,7 @@ D:/work/my-project/
 PRD 是对话中的一句话，输出在当前工作目录：
 
 ```
-./output/Claude/ben_20260630/ben__20260630153000/  ← 输出
+./output/Claude/20260708/ben__20260708114237/  ← 输出
 ```
 
 > 个人标识（`person`）来自配置文件；未配置时 dev-flow 会在第 0 步优先询问并写入全局 `~/.claude/dev-flow.config.md`。
@@ -96,7 +98,7 @@ PRD 是对话中的一句话，输出在当前工作目录：
 ```markdown
 ---
 claude_output: Claude
-person: ben          # 个人标识：用于文档署名 + 运行目录前缀
+person: ben          # 个人标识：用于文档署名 + 会话目录前缀
 language: zh-CN
 ---
 
