@@ -16,7 +16,7 @@
       },
       "source": "./plugins/dev-flow",
       "category": "development",
-      "homepage": "https://github.com/benbowenqwe/ben-plugins/tree/main/plugins/dev-flow"
+      "homepage": "https://github.com/Today-Hbw/ben-plugins/tree/main/plugins/dev-flow"
     },
     {
       "name": "dev-flow-lite",
@@ -27,7 +27,7 @@
       },
       "source": "./plugins/dev-flow-lite",
       "category": "development",
-      "homepage": "https://github.com/benbowenqwe/ben-plugins/tree/main/plugins/dev-flow-lite"
+      "homepage": "https://github.com/Today-Hbw/ben-plugins/tree/main/plugins/dev-flow-lite"
     },
     {
       "name": "forge-prd",
@@ -38,7 +38,7 @@
       },
       "source": "./plugins/forge-prd",
       "category": "development",
-      "homepage": "https://github.com/benbowenqwe/ben-plugins/tree/main/plugins/forge-prd"
+      "homepage": "https://github.com/Today-Hbw/ben-plugins/tree/main/plugins/forge-prd"
     }
   ]
 }
